@@ -15,6 +15,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from persiantools import digits
 import json
 import csv
+from typing import Optional
 
 # Use "program files" instead of "dependencies"
 font_path = os.path.join(os.path.dirname(__file__), "program files", "DejaVuSans.ttf")
@@ -56,7 +57,7 @@ def _get_next_invoice_number():
 def to_persian_digits(text):
     return digits.en_to_fa(str(text))
 
-def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], output_dir: str = None):
+def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
     """
     Generates a PDF invoice for a customer.
 
@@ -73,12 +74,12 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
     now = datetime.now().strftime("%d-%m")
     # Prepare and shape header texts for RTL display
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
     # Shape the customer name text for RTL
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_customer_name = str(get_display(reshape(customer_name)))
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
 
@@ -121,7 +122,7 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
     elements.append(Spacer(1, 20))
     # Build the items table
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [ get_display(reshape(h)) for h in headers_text ]
+    headers = [ str(get_display(reshape(h))) for h in headers_text ]
     headers = list(reversed(headers))
     data = [headers]
     total_price_all = 0.0
@@ -143,8 +144,8 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
         ]
         data.append(list(reversed(row)))
     # Add total price row
-    sh_total_label = get_display(reshape("جمع کل:"))
-    sh_total_price = get_display(reshape(f"{int(total_price_all):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل:")))
+    sh_total_price = str(get_display(reshape(f"{int(total_price_all):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
     tbl = Table(data, repeatRows=1, colWidths=[100,60,60,60,50,50,30,60,40])
@@ -168,8 +169,9 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
     except Exception as e:
         print(f"Warning: could not update invoice counter file: {e}")
     print(f"Invoice PDF saved to: {pdf_file}")
+    return pdf_file
 
-def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: str = None):
+def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
     """
     Generates a PDF invoice for a customer with 10% added value applied.
     """
@@ -181,11 +183,11 @@ def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items
     # Dates and header shaping
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
     now = datetime.now().strftime("%d-%m")
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
 
     # Safe filename
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
@@ -220,7 +222,7 @@ def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items
 
     # Item table headers
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [get_display(reshape(h)) for h in headers_text]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
 
@@ -246,15 +248,15 @@ def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items
 
     # Calculate and add value-added row (10%)
     added_value = total_price_all * 0.10
-    sh_added_label = get_display(reshape("مالیات بر ارزش افزوده:"))
-    sh_added_value = get_display(reshape(f"{int(added_value):,}"))
+    sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده:")))
+    sh_added_value = str(get_display(reshape(f"{int(added_value):,}")))
     added_row = ["", "", "", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total including added value
     final_total = total_price_all + added_value
-    sh_total_label = get_display(reshape("جمع کل:"))
-    sh_total_price = get_display(reshape(f"{int(final_total):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل:")))
+    sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
@@ -284,9 +286,10 @@ def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items
     except Exception as e:
         print(f"Warning: could not update invoice counter file: {e}")
     print(f"Invoice PDF with added value saved to: {pdf_file}")
+    return pdf_file
 
 
-def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: list[dict], output_dir: str = None):
+def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
     """
     Generates a PDF invoice for a customer with tiered discounts applied.
     """
@@ -297,11 +300,11 @@ def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: l
 
     # Dates and header shaping
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
 
     # Safe filename
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
@@ -335,7 +338,7 @@ def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: l
 
     # Item table headers
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [get_display(reshape(h)) for h in headers_text]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
 
@@ -378,19 +381,22 @@ def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: l
     for i in range(len(thresholds)):
         min_price, pct = thresholds[i]
         next_price = thresholds[i+1][0] if i+1 < len(thresholds) else total_price_all
-        if total_price_all > min_price:          segment = min(total_price_all, next_price) - min_price
+        if total_price_all > min_price:
+            segment = min(total_price_all, next_price) - min_price
+        else:
+            segment = 0.0
         discount_amount += segment * (pct / 100.0)
 
     # Add discount row
-    sh_discount_label = get_display(reshape("تخفیف :"))
-    sh_discount_value = get_display(reshape(f"{int(discount_amount):,}"))
+    sh_discount_label = str(get_display(reshape("تخفیف :")))
+    sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
     discount_row = ["", "", "", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Final total after discount
     final_total = total_price_all - discount_amount
-    sh_total_label = get_display(reshape("جمع کل :"))
-    sh_total_price = get_display(reshape(f"{int(final_total):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل :")))
+    sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
@@ -421,9 +427,10 @@ def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: l
         print(f"Warning: could not update invoice counter file: {e}")
 
     print(f"Invoice PDF with discount saved to: {pdf_file}")
+    return pdf_file
 
 
-def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: str = None):
+def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: Optional[str] = None):
     """
     Generates a PDF invoice for a customer applying a custom discount.
     If discount is <= 100, treat it as a percentage; if > 100, treat it as an absolute amount.
@@ -435,11 +442,11 @@ def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, i
 
     # Dates and header shaping
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
 
     # Safe filename
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
@@ -473,7 +480,7 @@ def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, i
 
     # Item table headers
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [get_display(reshape(h)) for h in headers_text]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
 
@@ -502,15 +509,15 @@ def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, i
         discount_amount = discount
 
     # Add discount row
-    sh_discount_label = get_display(reshape("تخفیف :"))
-    sh_discount_value = get_display(reshape(f"{int(discount_amount):,}"))
+    sh_discount_label = str(get_display(reshape("تخفیف :")))
+    sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
     discount_row = ["", "", "", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Final total after discount
     final_total = total_price_all - discount_amount
-    sh_total_label = get_display(reshape("جمع کل :"))
-    sh_total_price = get_display(reshape(f"{int(final_total):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل :")))
+    sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
@@ -541,9 +548,10 @@ def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, i
         print(f"Warning: could not update invoice counter file: {e}")
 
     print(f"Invoice PDF with custom discount saved to: {pdf_file}")
+    return pdf_file
 
 
-def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: str = None):
+def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
     """
     Generates a PDF invoice for a customer with tiered discounts and 10% added-value applied on the net amount.
     """
@@ -554,11 +562,11 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
 
     # Dates and header shaping
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
 
     # Safe filename
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
@@ -591,7 +599,7 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
 
     # Item table headers
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [get_display(reshape(h)) for h in headers_text]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
 
@@ -636,11 +644,13 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
         next_price = thresholds[i+1][0] if i+1 < len(thresholds) else total_price_all
         if total_price_all > min_price:
             segment = min(total_price_all, next_price) - min_price
-            discount_amount += segment * (pct / 100.0)
+        else:
+            segment = 0.0
+        discount_amount += segment * (pct / 100.0)
 
     # Add discount row
-    sh_discount_label = get_display(reshape("تخفیف :"))
-    sh_discount_value = get_display(reshape(f"{int(discount_amount):,}"))
+    sh_discount_label = str(get_display(reshape("تخفیف :")))
+    sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
     discount_row = ["", "", "", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
@@ -651,15 +661,15 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
     added_value_amount = net_amount * 0.10
 
     # Add added-value row
-    sh_added_label = get_display(reshape("مالیات بر ارزش افزوده :"))
-    sh_added_value = get_display(reshape(f"{int(added_value_amount):,}"))
+    sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده :")))
+    sh_added_value = str(get_display(reshape(f"{int(added_value_amount):,}")))
     added_row = ["", "", "", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total after discount and added value
     final_total = net_amount + added_value_amount
-    sh_total_label = get_display(reshape("جمع کل :"))
-    sh_total_price = get_display(reshape(f"{int(final_total):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل :")))
+    sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
@@ -690,9 +700,10 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
     except Exception as e:
         print(f"Warning: could not update invoice counter file: {e}")
     print(f"Invoice PDF with discount and added value saved to: {pdf_file}")
+    return pdf_file
 
 
-def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: str = None):
+def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: Optional[str] = None):
     """
     Generates a PDF invoice applying a custom discount (percentage if <=100, absolute if >100) and then adds 10% added-value on the net amount.
     """
@@ -703,11 +714,11 @@ def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoic
 
     # Dates and header shaping
     date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
-    sh_company = get_display(reshape(COMPANY_NAME))
-    sh_date    = get_display(reshape(f"تاریخ: {date_jalali}"))
-    sh_inv     = get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}"))
-    label_cust = get_display(reshape("نام مشتری:"))
-    sh_customer_name = get_display(reshape(customer_name))
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
 
     # Safe filename and document setup
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
@@ -739,7 +750,7 @@ def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoic
 
     # Populate items and compute total
     headers_text = ["شماره","قطر (mm)","SDR","گرید","طول (m)","وزن/متر (kg)","وزن کل (kg)","قیمت/kg","قیمت کل (تومان)"]
-    headers = [get_display(reshape(h)) for h in headers_text]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
     total_price_all = 0.0
@@ -759,23 +770,23 @@ def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoic
         discount_amount = discount
 
     # Add discount row
-    sh_discount_label = get_display(reshape("تخفیف :"))
-    sh_discount_value = get_display(reshape(f"{int(discount_amount):,}"))
+    sh_discount_label = str(get_display(reshape("تخفیف :")))
+    sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
     discount_row = ["", "", "", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Net amount after discount and 10% added-value
     net_amount = total_price_all - discount_amount
     added_value_amount = net_amount * 0.10
-    sh_added_label = get_display(reshape("مالیات بر ارزش افزوده :"))
-    sh_added_value = get_display(reshape(f"{int(added_value_amount):,}"))
+    sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده :")))
+    sh_added_value = str(get_display(reshape(f"{int(added_value_amount):,}")))
     added_row = ["", "", "", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total
     final_total = net_amount + added_value_amount
-    sh_total_label = get_display(reshape("جمع کل :"))
-    sh_total_price = get_display(reshape(f"{int(final_total):,}"))
+    sh_total_label = str(get_display(reshape("جمع کل :")))
+    sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
     total_row = ["", "", "", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
@@ -806,6 +817,7 @@ def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoic
         print(f"Warning: could not update invoice counter file: {e}")
 
     print(f"Invoice PDF with custom discount and added value saved to: {pdf_file}")
+    return pdf_file
 
 if __name__ == "__main__":
     def main():

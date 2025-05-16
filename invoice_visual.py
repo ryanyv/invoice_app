@@ -5,7 +5,7 @@ import shutil
 
 from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass
-from create_invoice_EN import (
+from create_pdf import (
     generate_pdf, to_persian_digits, generate_pdf_with_added_value, generate_pdf_with_discount,
     generate_pdf_with_custom_discount, generate_pdf_with_discount_and_added_value, generate_pdf_with_custom_discount_and_added_value
 )
@@ -456,6 +456,7 @@ class InvoiceApp(tk.Tk):
                 "price_per_kg": item_copy["price_per_kg"],
                 "total_price": item_copy["total_price"],
             })
+        pdf_result = None
         try:
             # Record start time to locate PDF if generate_pdf returns None
             gen_time = time.time()
