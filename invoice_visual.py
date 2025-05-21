@@ -21,6 +21,54 @@ import sys
 class InvoiceApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.action_frame = None
+        # --- Moved: Checkbox state and added-value/discount variables ---
+        self.include_added_var = tk.BooleanVar(value=False)
+        self.added_value_var = tk.StringVar(value="0.00")
+        self.include_discount_var = tk.BooleanVar(value=False)
+        self.discount_value_var = tk.StringVar(value="0.00")
+        self.custom_discount_var = tk.StringVar(value="")
+        # --- Dark mode variable ---
+        self.dark_mode_var = tk.BooleanVar(value=False)
+        # --- Begin expanded menu bar setup ---
+        menubar = tk.Menu(self)
+        # --- File Menu ---
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="New Invoice", command=self.clear_all)
+        file_menu.add_command(label="Change Output Directory", command=self.change_output_dir)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.quit)
+        menubar.add_cascade(label="File", menu=file_menu)
+        # --- Edit Menu ---
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu.add_command(label="Add Item", command=self.add_item)
+        edit_menu.add_command(label="Remove Item", command=self.remove_item)
+        edit_menu.add_command(label="Clear All", command=self.clear_all)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+        # --- Invoice Menu ---
+        invoice_menu = tk.Menu(menubar, tearoff=0)
+        invoice_menu.add_command(label="Generate Invoice", command=self.generate_invoice)
+        menubar.add_cascade(label="Invoice", menu=invoice_menu)
+        # --- Options Menu ---
+        options_menu = tk.Menu(menubar, tearoff=0)
+        options_menu.add_checkbutton(
+            label="Include Added Value (10%)",
+            variable=self.include_added_var,
+            command=self.on_toggle_added
+        )
+        options_menu.add_checkbutton(
+            label="Include Discount",
+            variable=self.include_discount_var,
+            command=self.on_toggle_discount
+        )
+        menubar.add_cascade(label="Options", menu=options_menu)
+        # --- Help Menu ---
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="About", command=lambda: messagebox.showinfo("About", "PolyGharb Invoice Generator\nv1.0"))
+        help_menu.add_command(label="User Guide", command=lambda: messagebox.showinfo("User Guide", "For help, contact support or see documentation."))
+        menubar.add_cascade(label="Help", menu=help_menu)
+        self.config(menu=menubar)
+        # --- End expanded menu bar setup ---
         self.title("Invoice Generator")
         self.load_config()
         # defer sizing until after widgets are created
@@ -28,10 +76,7 @@ class InvoiceApp(tk.Tk):
         self.create_widgets()
         # enforce appropriate initial and minimum size
         self.update_idletasks()
-        req_w = self.winfo_reqwidth()
-        req_h = self.winfo_reqheight()
-        self.geometry(f"{req_w}x{req_h}")
-        self.minsize(req_w, req_h)
+        self.minsize(900, 500)
         self.resizable(True, True)
 
     def load_config(self):
@@ -172,68 +217,43 @@ class InvoiceApp(tk.Tk):
         self.entries["total_price"].bind("<FocusOut>", self.update_add_button_state, add="+")
 
         # Checkbox state and added-value display variables
-        self.include_added_var = tk.BooleanVar(value=False)
-        self.added_value_var = tk.StringVar(value="0.00")
-        # Checkbox state and discount display variables
-        self.include_discount_var = tk.BooleanVar(value=False)
-        self.discount_value_var = tk.StringVar(value="0.00")
-        # Custom discount percentage variable (disabled until discount is enabled)
-        self.custom_discount_var = tk.StringVar(value="")
+        # (Now initialized in __init__ before menu bar)
 
-        # Buttons to add item and generate invoice
-        btn_frame = tk.Frame(self)
-        btn_frame.pack(pady=10)
-        self.add_btn = tk.Button(btn_frame, text="Add Item", command=self.add_item, state=tk.DISABLED)
-        self.add_btn.pack(side='left', padx=5)
-        self.generate_btn = tk.Button(btn_frame, text="Generate Invoice", command=self.generate_invoice, state=tk.DISABLED)
-        self.generate_btn.pack(side='left', padx=5)
-        self.remove_btn = tk.Button(btn_frame, text="Remove Item", command=self.remove_item, state=tk.DISABLED)
-        self.remove_btn.pack(side='left', padx=5)
-        # Button to change output directory at runtime
-        tk.Button(btn_frame, text="Change Output Directory", command=self.change_output_dir).pack(side='left', padx=5)
-        # Label and entry for custom discount percentage
-        tk.Label(btn_frame, text="Custom Discount %:").pack(side='left', padx=5)
-        self.custom_discount_entry = tk.Entry(
-            btn_frame,
-            textvariable=self.custom_discount_var,
-            width=5,
-            validate="key",
-            validatecommand=custom_vcmd,
-            state='disabled'
-        )
-        self.custom_discount_entry.pack(side='left', padx=5)
-        # Update discount live as user types or leaves the field
-        self.custom_discount_entry.bind("<KeyRelease>", lambda e: self.update_subtotal())
-        self.custom_discount_entry.bind("<FocusOut>", lambda e: self.update_subtotal())
-        # Checkbox to include discount
-        tk.Checkbutton(
-            btn_frame,
-            text="Include Added Value (10%)",
-            variable=self.include_added_var,
-            command=self.on_toggle_added
-        ).pack(side='left', padx=5)
-        # Checkbox to include discount
-        tk.Checkbutton(
-            btn_frame,
-            text="Include Discount",
-            variable=self.include_discount_var,
-            command=self.on_toggle_discount
-        ).pack(side='left', padx=5)
-        # Button to clear all fields and items
-        tk.Button(btn_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=5)
+        # Add dark mode toggle to options menu
+        # Find the menubar and options_menu again (they are local in __init__, so we must reconstruct here)
+        menubar = self.nametowidget(self.winfo_toplevel().cget("menu"))
+        options_menu = None
+        for ix in range(menubar.index("end")+1):
+            if menubar.type(ix) == "cascade" and menubar.entrycget(ix, "label") == "Options":
+                options_menu = menubar.nametowidget(menubar.entrycget(ix, "menu"))
+                break
+        if options_menu is not None:
+            options_menu.add_checkbutton(
+                label="Dark Mode",
+                variable=self.dark_mode_var,
+                command=self.on_toggle_dark_mode
+            )
 
         # Treeview to list added items, with item number column
         columns = ("no", "grade", "pn", "sdr", "diameter", "length", "weight_per_m", "total_mass", "price_per_kg", "total_price")
-        self.tree = ttk.Treeview(self, columns=columns, show='headings', height=8)
+        # --- Begin treeview frame and scroll setup ---
+        tree_frame = tk.Frame(self)
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=8)
         headings = ["No.", "Grade", "PN", "SDR", "Diameter", "Length", "Weight/m", "Total Mass", "Price/kg", "Total Price"]
         # Prepare sort directions for each column
         self.sort_dirs = {col: False for col in columns}
-        # Configure headings as clickable for sorting
+        # Configure headings as clickable for sorting and set column widths/anchors as specified
         for col, hd in zip(columns, headings):
-            width = 50 if col == "no" else 90
+            if col == "no":
+                self.tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
+            else:
+                self.tree.column(col, width=90, minwidth=70, stretch=True, anchor='center')
             self.tree.heading(col, text=hd, command=lambda _col=col: self.sort_by(_col))
-            self.tree.column(col, width=width, anchor='center')
-        self.tree.pack(fill='both', expand=True, padx=10, pady=5)
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vsb.set)
+        self.tree.pack(side='left', fill='both', expand=True)
+        vsb.pack(side='right', fill='y')
         # Ensure the treeview has keyboard focus so arrow bindings fire
         self.tree.focus_set()
         self.tree.bind("<<TreeviewSelect>>", self.update_remove_button_state)
@@ -268,6 +288,16 @@ class InvoiceApp(tk.Tk):
             text="Discount:",
             font=("Helvetica", 11, "bold")
         ).pack(side='left')
+        # Custom discount percent entry (always appears to the right of the label)
+        self.custom_discount_entry = tk.Entry(
+            self.discount_frame,
+            textvariable=self.custom_discount_var,
+            width=5,
+            validate="key",
+            validatecommand=(self.register(self.validate_custom_discount), '%P')
+        )
+        self.custom_discount_entry.pack(side='left', padx=5)
+        self.custom_discount_entry.bind("<KeyRelease>", lambda e: self.update_subtotal())
         tk.Label(
             self.discount_frame,
             textvariable=self.discount_value_var,
@@ -283,8 +313,26 @@ class InvoiceApp(tk.Tk):
         self.subtotal_var = tk.StringVar(value="0.00")
         tk.Label(self.subtotal_frame, textvariable=self.subtotal_var, font=("Helvetica", 11, "bold"), anchor='e').pack(side='right')
 
+        # Generate Invoice button below subtotal
+        self.generate_btn_frame = tk.Frame(self)
+        self.generate_btn_frame.pack(fill='x', padx=10, pady=(10, 15))
+        self.generate_btn = tk.Button(
+            self.generate_btn_frame,
+            text="Generate Invoice",
+            command=self.generate_invoice,
+            font=("Helvetica", 13, "bold"),
+            bg="#d3d3d3",
+            fg="black",
+            height=2,
+        )
+        self.generate_btn.pack(fill='x')
+
+
         # Initialise button state
         self.update_add_button_state()
+
+        # Enable pressing Enter (Return) to add the item
+        self.bind('<Return>', lambda event: self.add_item())
 
     def add_item(self):
         try:
@@ -407,8 +455,9 @@ class InvoiceApp(tk.Tk):
 
     def generate_invoice(self):
         # Optional: At the start, destroy previous action_frame if it exists to avoid stacking buttons
-        if hasattr(self, 'action_frame'):
+        if self.action_frame is not None:
             self.action_frame.destroy()
+            self.action_frame = None
         if not hasattr(self, 'items') or not self.items:
             messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
             return
@@ -525,12 +574,7 @@ class InvoiceApp(tk.Tk):
                 raise ValueError(f"PDF generation failed: file '{pdf_path}' does not exist.")
             messagebox.showinfo("Invoice Created", f"Invoice #{invoice_number} generated successfully.\nSaved to: {pdf_path}")
 
-            # Show buttons to open or save the invoice
-            action_frame = tk.Frame(self)
-            action_frame.pack(pady=5)
-            tk.Button(action_frame, text="Open Invoice", command=lambda: os.system(f'open "{pdf_path}"')).pack(side='left', padx=5)
-            tk.Button(action_frame, text="Save Invoice As...", command=lambda: self.save_invoice_as(pdf_path)).pack(side='left', padx=5)
-            self.action_frame = action_frame
+            # (No buttons to open or save the invoice after generation)
             # (No clearing of customer, entries, items, or treeview here)
         except Exception as e:
             message = str(e)
@@ -620,20 +664,16 @@ class InvoiceApp(tk.Tk):
             self.added_value_var.set(f"{int(added):,}")
         else:
             self.added_value_var.set("0.00")
-        # Enable/disable generate button
-        if self.items and self.customer_entry.get().strip():
-            self.generate_btn.config(state=tk.NORMAL)
-        else:
-            self.generate_btn.config(state=tk.DISABLED)
 
     def on_toggle_discount(self):
         if self.include_discount_var.get():
-            # Enable custom discount entry and show discount line above subtotal
-            self.custom_discount_entry.config(state='normal')
+            # Show discount line above subtotal
             self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+            # If added value is also enabled, ensure added_frame is shown after discount_frame but before subtotal_frame
+            if self.include_added_var.get():
+                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
         else:
-            # Disable custom discount entry and hide discount line
-            self.custom_discount_entry.config(state='disabled')
+            # Hide discount line
             self.discount_frame.pack_forget()
         # Update displayed values
         self.update_subtotal()
@@ -646,10 +686,19 @@ class InvoiceApp(tk.Tk):
 
     def on_toggle_added(self):
         if self.include_added_var.get():
-            # Show added value line above subtotal
-            self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+            # If discount is enabled, ensure discount_frame is packed before added_frame
+            if self.include_discount_var.get():
+                self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+            else:
+                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
         else:
             self.added_frame.pack_forget()
+        # If discount is enabled, ensure discount_frame is packed before added_frame and both before subtotal_frame
+        if self.include_discount_var.get():
+            self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+            if self.include_added_var.get():
+                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
         # Update displayed values
         self.update_subtotal()
         # Adjust window size to accommodate the new added value line
@@ -867,17 +916,10 @@ class InvoiceApp(tk.Tk):
         core_ok = grade_filled and diameter_filled and (sdr_filled or pn_filled)
         qty_ok = length_filled or mass_filled
         price_ok = price_filled or total_price_filled
-
-        if core_ok and qty_ok and price_ok:
-            self.add_btn.config(state=tk.NORMAL)
-        else:
-            self.add_btn.config(state=tk.DISABLED)
+        # Removed all references to self.add_btn
 
     def update_remove_button_state(self, event=None):
-        if self.tree.selection():
-            self.remove_btn.config(state=tk.NORMAL)
-        else:
-            self.remove_btn.config(state=tk.DISABLED)
+        pass
 
     def clear_all(self):
         """Clear all input fields and items."""
@@ -907,6 +949,10 @@ class InvoiceApp(tk.Tk):
         """Re-number the 'No.' column sequentially."""
         for idx, iid in enumerate(self.tree.get_children(), start=1):
             self.tree.set(iid, "no", idx)
+
+    def on_toggle_dark_mode(self):
+        # Theme switching will be implemented here.
+        pass
 
     def sort_by(self, col):
         """Sort items and treeview by given column."""
@@ -975,3 +1021,7 @@ class InvoiceApp(tk.Tk):
 if __name__ == "__main__":
     app = InvoiceApp()
     app.mainloop()
+    def on_toggle_dark_mode(self):
+        """Stub for now, will apply theme next."""
+        # Theme application will be handled in the next step.
+        pass
