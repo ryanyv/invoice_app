@@ -6,7 +6,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from bidi.algorithm import get_display
 from arabic_reshaper import reshape
 from khayyam import JalaliDate
@@ -57,7 +57,7 @@ def _get_next_invoice_number():
 def to_persian_digits(text):
     return digits.en_to_fa(str(text))
 
-def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
+def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None, explanation_text: Optional[str] = None):
     """
     Generates a PDF invoice for a customer.
 
@@ -66,6 +66,7 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
         invoice_number (str): The invoice number.
         items (list[dict]): A list of item dictionaries with invoice details.
         output_dir (str, optional): Path to the directory where the PDF will be saved. Defaults to None, which uses the module's 'خروجی' directory.
+        explanation_text (str, optional): Additional explanation text to include in the PDF.
     """
     # Determine and create output directory if it doesn't exist
     if output_dir is None:
@@ -159,19 +160,38 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
         ('ALIGN', (1, len(data)-1), (1, len(data)-1), 'LEFT'),
     ]))
     elements.append(tbl)
+
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))  # More space before explanation section
+
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     # Generate PDF with logo on pages
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
-    # Update invoice counter for next invoice
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF saved to: {pdf_file}")
     return pdf_file
 
-def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
+def generate_pdf_with_added_value(
+    customer_name: str, invoice_number: str, items: list[dict],
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None
+):
     """
     Generates a PDF invoice for a customer with 10% added value applied.
     """
@@ -276,20 +296,37 @@ def generate_pdf_with_added_value(customer_name: str, invoice_number: str, items
     ]))
     elements.append(tbl)
 
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
-    # Update invoice counter for next invoice
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF with added value saved to: {pdf_file}")
     return pdf_file
 
 
-def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
+def generate_pdf_with_discount(
+    customer_name: str,
+    invoice_number: str,
+    items: list[dict],
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None
+):
     """
     Generates a PDF invoice for a customer with tiered discounts applied.
     """
@@ -416,21 +453,37 @@ def generate_pdf_with_discount(customer_name: str, invoice_number: str, items: l
     ]))
     elements.append(tbl)
 
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
-    # Update invoice counter
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
-
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF with discount saved to: {pdf_file}")
     return pdf_file
 
 
-def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: Optional[str] = None):
+def generate_pdf_with_custom_discount(
+    customer_name: str,
+    invoice_number: str,
+    items: list[dict],
+    discount: float,
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None):
     """
     Generates a PDF invoice for a customer applying a custom discount.
     If discount is <= 100, treat it as a percentage; if > 100, treat it as an absolute amount.
@@ -536,22 +589,37 @@ def generate_pdf_with_custom_discount(customer_name: str, invoice_number: str, i
     ]))
     elements.append(tbl)
 
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
-
-    # Update invoice counter
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
-
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF with custom discount saved to: {pdf_file}")
     return pdf_file
 
 
-def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], output_dir: Optional[str] = None):
+def generate_pdf_with_discount_and_added_value(
+    customer_name: str,
+    invoice_number: str,
+    items: list[dict],
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None
+):
     """
     Generates a PDF invoice for a customer with tiered discounts and 10% added-value applied on the net amount.
     """
@@ -690,20 +758,37 @@ def generate_pdf_with_discount_and_added_value(customer_name: str, invoice_numbe
     ]))
     elements.append(tbl)
 
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
-    # Update invoice counter
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF with discount and added value saved to: {pdf_file}")
     return pdf_file
 
 
-def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoice_number: str, items: list[dict], discount: float, output_dir: Optional[str] = None):
+def generate_pdf_with_custom_discount_and_added_value(
+    customer_name: str,
+    invoice_number: str,
+    items: list[dict],
+    discount: float,
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None):
     """
     Generates a PDF invoice applying a custom discount (percentage if <=100, absolute if >100) and then adds 10% added-value on the net amount.
     """
@@ -806,22 +891,32 @@ def generate_pdf_with_custom_discount_and_added_value(customer_name: str, invoic
     ]))
     elements.append(tbl)
 
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
 
-    # Update invoice counter
-    try:
-        next_counter = int(invoice_number) + 1
-        with open(INVOICE_COUNTER_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'counter': next_counter}, f)
-    except Exception as e:
-        print(f"Warning: could not update invoice counter file: {e}")
-
+    # Invoice counter is managed by the GUI application
     print(f"Invoice PDF with custom discount and added value saved to: {pdf_file}")
     return pdf_file
 
 if __name__ == "__main__":
     def main():
-        customer_name = ' haha '
+        customer_name = 'مشتری آزمایشی'
         if not customer_name:
             customer_name = "مشتری نمونه"
 
@@ -851,7 +946,11 @@ if __name__ == "__main__":
             }
         ]
 
-        generate_pdf_with_custom_discount_and_added_value(customer_name, invoice_number, items,discount=10)
+        explanation = "این یک متن توضیحات نمونه است که در پایین فاکتور نمایش داده می‌شود.\nمی‌تواند شامل چندین خط باشد."
+
+        generate_pdf_with_custom_discount_and_added_value(
+            customer_name, invoice_number, items, discount=10, explanation_text=explanation
+        )
 
 
     main()

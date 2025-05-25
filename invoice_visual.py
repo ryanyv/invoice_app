@@ -266,6 +266,20 @@ class InvoiceApp(tk.Tk):
         self.tree.bind("<KeyPress-Up>", self.on_up_pressed, add="+")
         self.tree.bind("<ButtonRelease-1>", self.on_tree_blank_click, add="+")
 
+        # Explanation input
+        explanation_outer_frame = tk.Frame(self) # Outer frame for padding
+        explanation_outer_frame.pack(fill='x', padx=10, pady=(5,0)) # pady top 5, bottom 0
+
+        explanation_frame = tk.LabelFrame(explanation_outer_frame, text="Explanation / Notes")
+        explanation_frame.pack(fill='x', expand=True)
+
+        self.explanation_text_widget = tk.Text(explanation_frame, height=3, wrap=tk.WORD, font=("Helvetica", 9))
+        self.explanation_text_widget.pack(fill='x', expand=True, padx=5, pady=5)
+        # Optional: Add a scrollbar if you expect very long explanations
+        # scroll = ttk.Scrollbar(explanation_frame, command=self.explanation_text_widget.yview)
+        # self.explanation_text_widget.configure(yscrollcommand=scroll.set)
+        # scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
         # Added Value display (hidden until checkbox checked)
         self.added_frame = tk.Frame(self)
         tk.Label(
@@ -465,31 +479,50 @@ class InvoiceApp(tk.Tk):
         if not customer:
             messagebox.showwarning("Missing Customer", "Please enter the customer name.")
             return
+
         # Use persistent counter file for invoice numbers
         counter_path = self.counter_file
-        # Read last used invoice number
+        # Read highest invoice number previously recorded
         try:
             with open(counter_path, "r", encoding="utf-8") as cf:
                 data = json.load(cf)
-                last_used = int(data.get("counter", 0))
+                highest_invoice_on_record = int(data.get("counter", 0))
         except Exception:
-            last_used = 0
-        # Determine invoice number: override or next
-        invoice_number_input = self.invoice_entry.get().strip()
-        if invoice_number_input:
-            invoice_number = invoice_number_input
+            highest_invoice_on_record = 0
+
+        user_entered_invoice_str = self.invoice_entry.get().strip()
+        
+        if user_entered_invoice_str:
+            # User provided an invoice number
+            try:
+                current_invoice_str_for_pdf = user_entered_invoice_str
+                current_invoice_int_for_pdf = int(current_invoice_str_for_pdf)
+            except ValueError:
+                messagebox.showerror("Invalid Invoice Number", 
+                                     f"The provided invoice number '{user_entered_invoice_str}' is not a valid integer.")
+                return
         else:
-            invoice_number = str(last_used + 1)
-        # Save this as the new last used counter
+            # Auto-generate invoice number: one greater than the highest on record
+            current_invoice_int_for_pdf = highest_invoice_on_record + 1
+            current_invoice_str_for_pdf = str(current_invoice_int_for_pdf)
+
+        # Determine the new highest number to save in the counter file.
+        # This will be the maximum of what was on record and the current invoice number being used.
+        new_highest_for_record = max(highest_invoice_on_record, current_invoice_int_for_pdf)
+
+        # Save this new highest number to the counter file
         try:
-            new_last_used = int(invoice_number)
             with open(counter_path, "w", encoding="utf-8") as cf:
-                json.dump({"counter": new_last_used}, cf)
-            # Update entry to show next invoice number
+                json.dump({"counter": new_highest_for_record}, cf)
+            
+            # Update the invoice entry field to show the *next* suggested invoice number
             self.invoice_entry.delete(0, tk.END)
-            self.invoice_entry.insert(0, str(new_last_used + 1))
+            self.invoice_entry.insert(0, str(new_highest_for_record + 1))
         except Exception as e:
-            messagebox.showwarning("Counter File Update", f"Could not update counter file:\n{e}")
+            messagebox.showwarning("Counter File Update", f"Could not update counter file '{counter_path}':\n{e}")
+
+        invoice_number = current_invoice_str_for_pdf # Use this for the PDF
+        explanation = self.explanation_text_widget.get("1.0", tk.END).strip()
         # Prepare items in the format expected by generate_pdf
         pdf_items = []
         for it in self.items:
@@ -520,29 +553,33 @@ class InvoiceApp(tk.Tk):
                     if self.include_added_var.get():
                         pdf_result = generate_pdf_with_custom_discount_and_added_value(
                             customer, invoice_number, pdf_items, discount_pct,
-                            output_dir=self.output_dir
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
                         )
                     else:
                         pdf_result = generate_pdf_with_custom_discount(
                             customer, invoice_number, pdf_items, discount_pct,
-                            output_dir=self.output_dir
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
                         )
                 else:
                     if self.include_added_var.get():
                         pdf_result = generate_pdf_with_discount_and_added_value(
                             customer, invoice_number, pdf_items,
-                            output_dir=self.output_dir
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
                         )
                     else:
                         pdf_result = generate_pdf_with_discount(
                             customer, invoice_number, pdf_items,
-                            output_dir=self.output_dir
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
                         )
             else:
                 if self.include_added_var.get():
-                    pdf_result = generate_pdf_with_added_value(customer, invoice_number, pdf_items, output_dir=self.output_dir)
+                    pdf_result = generate_pdf_with_added_value(customer, invoice_number, pdf_items, output_dir=self.output_dir, explanation_text=explanation)
                 else:
-                    pdf_result = generate_pdf(customer, invoice_number, pdf_items, output_dir=self.output_dir)
+                    pdf_result = generate_pdf(customer, invoice_number, pdf_items, output_dir=self.output_dir, explanation_text=explanation)
             if pdf_result is None:
                 # Attempt to locate PDF file generated in output_dir
                 pattern = os.path.join(self.output_dir, f"*{invoice_number}*.pdf")
@@ -935,6 +972,8 @@ class InvoiceApp(tk.Tk):
         self.items.clear()
         for item in self.tree.get_children():
             self.tree.delete(item)
+        # Clear explanation text widget
+        self.explanation_text_widget.delete("1.0", tk.END)
         # Hide added value frame if shown
         if self.include_added_var.get():
             self.include_added_var.set(False)
