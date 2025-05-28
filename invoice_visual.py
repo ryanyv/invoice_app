@@ -21,6 +21,7 @@ import sys
 class InvoiceApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.notebook = None
         self.action_frame = None
         # --- Moved: Checkbox state and added-value/discount variables ---
         self.include_added_var = tk.BooleanVar(value=False)
@@ -70,10 +71,23 @@ class InvoiceApp(tk.Tk):
         self.config(menu=menubar)
         # --- End expanded menu bar setup ---
         self.title("Invoice Generator")
+        
+        # --- Notebook for tabs ---
+        self.notebook = ttk.Notebook(self)
+
+        self.standard_invoice_tab_frame = ttk.Frame(self.notebook)
+        self.connection_pipe_tab_frame = ttk.Frame(self.notebook)
+
+        self.notebook.add(self.standard_invoice_tab_frame, text='Standard Invoice')
+        self.notebook.add(self.connection_pipe_tab_frame, text='Connection Pipes')
+        self.notebook.pack(expand=True, fill='both', padx=5, pady=5)
+
         self.load_config()
         # defer sizing until after widgets are created
-        self.items = []
-        self.create_widgets()
+        self.standard_items = [] # Renamed from self.items
+        
+        self.create_standard_invoice_tab(self.standard_invoice_tab_frame)
+        self.create_connection_pipe_tab(self.connection_pipe_tab_frame)
         # enforce appropriate initial and minimum size
         self.update_idletasks()
         self.minsize(900, 500)
@@ -116,9 +130,9 @@ class InvoiceApp(tk.Tk):
         except ValueError:
             return False
 
-    def create_widgets(self):
+    def create_standard_invoice_tab(self, parent_frame):
         # Customer input
-        customer_frame = tk.Frame(self)
+        customer_frame = tk.Frame(parent_frame)
         customer_frame.pack(pady=10, fill='x', padx=10)
         tk.Label(customer_frame, text="Customer Name:").pack(side='left')
         self.customer_entry = tk.Entry(customer_frame)
@@ -136,7 +150,7 @@ class InvoiceApp(tk.Tk):
         default_inv_num = str(last_used + 1)
 
         # Invoice number input
-        invoice_frame = tk.Frame(self)
+        invoice_frame = tk.Frame(parent_frame)
         invoice_frame.pack(pady=5, fill='x', padx=10)
         tk.Label(invoice_frame, text="Invoice Number:").pack(side='left')
         self.invoice_entry = tk.Entry(invoice_frame)
@@ -144,12 +158,12 @@ class InvoiceApp(tk.Tk):
         self.invoice_entry.pack(side='left', fill='x', expand=True, padx=5)
 
         # Item detail inputs
-        item_frame = tk.LabelFrame(self, text="Item Details")
+        item_frame = tk.LabelFrame(parent_frame, text="Item Details")
         item_frame.pack(fill='x', padx=10, pady=5)
         # Allow entry columns in item_frame to expand/contract
         for col in (1, 3, 5, 7):
             item_frame.grid_columnconfigure(col, weight=1)
-
+        
         labels = [
             ("Pipe Grade", "grade"),
             ("PN", "pn"),
@@ -160,7 +174,7 @@ class InvoiceApp(tk.Tk):
             ("Price per kg", "price_per_kg"),
             ("Total Price", "total_price"),
         ]
-        self.entries = {}
+        self.standard_entries = {} # Renamed from self.entries
         for idx, (label_text, key) in enumerate(labels):
             row = idx // 4
             col = (idx % 4) * 2
@@ -170,51 +184,51 @@ class InvoiceApp(tk.Tk):
             else:
                 entry = tk.Entry(item_frame)
             entry.grid(row=row, column=col+1, sticky='w', padx=2, pady=2)
-            self.entries[key] = entry
+            self.standard_entries[key] = entry
 
         # Configure validation for numeric-only entries
         numeric_vcmd = (self.register(self.validate_numeric), '%P')
         # Validation command for custom discount percentage (1-100)
         custom_vcmd = (self.register(self.validate_custom_discount), '%P')
         for key in ("length", "total_mass", "price_per_kg", "total_price"):
-            self.entries[key].config(validate="key", validatecommand=numeric_vcmd)
+            self.standard_entries[key].config(validate="key", validatecommand=numeric_vcmd)
 
         # Monitor widgets to keep the Add Item button enabled/disabled correctly
-        for key, widget in self.entries.items():
+        for key, widget in self.standard_entries.items():
             if isinstance(widget, ttk.Combobox):
                 widget.bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
             else:
                 widget.bind("<KeyRelease>", self.update_add_button_state)
                 widget.bind("<FocusOut>", self.update_add_button_state, add="+")
-
+        
         # Load dropdown data for grade, SDR, PN, and Diameter
         self.load_series_data()
-        self.entries["grade"]["values"] = self.grades
-        self.entries["grade"].bind("<<ComboboxSelected>>", self.on_grade_selected)
-        self.entries["grade"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
-        self.entries["sdr"].bind("<<ComboboxSelected>>", self.on_sdr_selected)
-        self.entries["sdr"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
-        self.entries["pn"].bind("<<ComboboxSelected>>", self.on_pn_selected)
-        self.entries["pn"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
+        self.standard_entries["grade"]["values"] = self.grades
+        self.standard_entries["grade"].bind("<<ComboboxSelected>>", self.on_grade_selected)
+        self.standard_entries["grade"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
+        self.standard_entries["sdr"].bind("<<ComboboxSelected>>", self.on_sdr_selected)
+        self.standard_entries["sdr"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
+        self.standard_entries["pn"].bind("<<ComboboxSelected>>", self.on_pn_selected)
+        self.standard_entries["pn"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
         self.load_diameter_data()
-        self.entries["diameter"]["values"] = self.diameters
-        self.entries["diameter"].bind("<<ComboboxSelected>>", self.on_diameter_changed)
-        self.entries["diameter"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
+        self.standard_entries["diameter"]["values"] = self.diameters
+        self.standard_entries["diameter"].bind("<<ComboboxSelected>>", self.on_diameter_changed)
+        self.standard_entries["diameter"].bind("<<ComboboxSelected>>", self.update_add_button_state, add="+")
 
         # Bind length and total_mass for auto calculation, live as user types
-        self.entries["length"].bind("<KeyRelease>", self.on_length_changed)
-        self.entries["length"].bind("<FocusOut>", self.on_length_changed)
-        self.entries["total_mass"].bind("<KeyRelease>", self.on_mass_changed)
-        self.entries["total_mass"].bind("<FocusOut>", self.on_mass_changed)
+        self.standard_entries["length"].bind("<KeyRelease>", self.on_length_changed)
+        self.standard_entries["length"].bind("<FocusOut>", self.on_length_changed)
+        self.standard_entries["total_mass"].bind("<KeyRelease>", self.on_mass_changed)
+        self.standard_entries["total_mass"].bind("<FocusOut>", self.on_mass_changed)
         # Bind price_per_kg and total_price for auto calculation, live as user types
-        self.entries["price_per_kg"].bind("<KeyRelease>", self.on_price_changed)
-        self.entries["price_per_kg"].bind("<KeyRelease>", self.update_add_button_state, add="+")
-        self.entries["price_per_kg"].bind("<FocusOut>", self.on_price_changed)
-        self.entries["price_per_kg"].bind("<FocusOut>", self.update_add_button_state, add="+")
-        self.entries["total_price"].bind("<KeyRelease>", self.on_total_price_changed)
-        self.entries["total_price"].bind("<KeyRelease>", self.update_add_button_state, add="+")
-        self.entries["total_price"].bind("<FocusOut>", self.on_total_price_changed)
-        self.entries["total_price"].bind("<FocusOut>", self.update_add_button_state, add="+")
+        self.standard_entries["price_per_kg"].bind("<KeyRelease>", self.on_price_changed)
+        self.standard_entries["price_per_kg"].bind("<KeyRelease>", self.update_add_button_state, add="+")
+        self.standard_entries["price_per_kg"].bind("<FocusOut>", self.on_price_changed)
+        self.standard_entries["price_per_kg"].bind("<FocusOut>", self.update_add_button_state, add="+")
+        self.standard_entries["total_price"].bind("<KeyRelease>", self.on_total_price_changed)
+        self.standard_entries["total_price"].bind("<KeyRelease>", self.update_add_button_state, add="+")
+        self.standard_entries["total_price"].bind("<FocusOut>", self.on_total_price_changed)
+        self.standard_entries["total_price"].bind("<FocusOut>", self.update_add_button_state, add="+")
 
         # Checkbox state and added-value display variables
         # (Now initialized in __init__ before menu bar)
@@ -237,37 +251,37 @@ class InvoiceApp(tk.Tk):
         # Treeview to list added items, with item number column
         columns = ("no", "grade", "pn", "sdr", "diameter", "length", "weight_per_m", "total_mass", "price_per_kg", "total_price")
         # --- Begin treeview frame and scroll setup ---
-        tree_frame = tk.Frame(self)
+        tree_frame = tk.Frame(parent_frame)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=8)
+        self.standard_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=8) # Renamed from self.tree
         headings = ["No.", "Grade", "PN", "SDR", "Diameter", "Length", "Weight/m", "Total Mass", "Price/kg", "Total Price"]
         # Prepare sort directions for each column
-        self.sort_dirs = {col: False for col in columns}
+        self.standard_sort_dirs = {col: False for col in columns} # Renamed
         # Configure headings as clickable for sorting and set column widths/anchors as specified
         for col, hd in zip(columns, headings):
             if col == "no":
-                self.tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
+                self.standard_tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
             else:
-                self.tree.column(col, width=90, minwidth=70, stretch=True, anchor='center')
-            self.tree.heading(col, text=hd, command=lambda _col=col: self.sort_by(_col))
-        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=vsb.set)
-        self.tree.pack(side='left', fill='both', expand=True)
+                self.standard_tree.column(col, width=90, minwidth=70, stretch=True, anchor='center')
+            self.standard_tree.heading(col, text=hd, command=lambda _col=col: self.sort_by(_col)) # Will need to adapt sort_by
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.standard_tree.yview)
+        self.standard_tree.configure(yscrollcommand=vsb.set)
+        self.standard_tree.pack(side='left', fill='both', expand=True)
         vsb.pack(side='right', fill='y')
         # Ensure the treeview has keyboard focus so arrow bindings fire
-        self.tree.focus_set()
-        self.tree.bind("<<TreeviewSelect>>", self.update_remove_button_state)
+        self.standard_tree.focus_set()
+        self.standard_tree.bind("<<TreeviewSelect>>", self.update_remove_button_state)
         # Give keyboard focus to tree whenever selection changes
-        self.tree.bind("<<TreeviewSelect>>", lambda event: self.tree.focus_set(), add="+")
+        self.standard_tree.bind("<<TreeviewSelect>>", lambda event: self.standard_tree.focus_set(), add="+")
         # Bind Delete and BackSpace keys on tree to remove selected items
-        self.tree.bind("<Delete>", lambda event: self.remove_item(), add="+")
-        self.tree.bind("<BackSpace>", lambda event: self.remove_item(), add="+")
-        self.tree.bind("<KeyPress-Down>", self.on_down_pressed, add="+")
-        self.tree.bind("<KeyPress-Up>", self.on_up_pressed, add="+")
-        self.tree.bind("<ButtonRelease-1>", self.on_tree_blank_click, add="+")
+        self.standard_tree.bind("<Delete>", lambda event: self.remove_item(), add="+") # remove_item will need to be tab-aware
+        self.standard_tree.bind("<BackSpace>", lambda event: self.remove_item(), add="+")
+        self.standard_tree.bind("<KeyPress-Down>", self.on_down_pressed, add="+") # on_down_pressed will need to be tab-aware
+        self.standard_tree.bind("<KeyPress-Up>", self.on_up_pressed, add="+") # on_up_pressed will need to be tab-aware
+        self.standard_tree.bind("<ButtonRelease-1>", self.on_tree_blank_click, add="+") # on_tree_blank_click will need to be tab-aware
 
         # Explanation input
-        explanation_outer_frame = tk.Frame(self) # Outer frame for padding
+        explanation_outer_frame = tk.Frame(parent_frame) # Outer frame for padding
         explanation_outer_frame.pack(fill='x', padx=10, pady=(5,0)) # pady top 5, bottom 0
 
         explanation_frame = tk.LabelFrame(explanation_outer_frame, text="Explanation / Notes")
@@ -281,7 +295,7 @@ class InvoiceApp(tk.Tk):
         # scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Added Value display (hidden until checkbox checked)
-        self.added_frame = tk.Frame(self)
+        self.added_frame = tk.Frame(parent_frame)
         tk.Label(
             self.added_frame,
             text="Added Value (10%):",
@@ -296,7 +310,7 @@ class InvoiceApp(tk.Tk):
         # Do not pack added_frame now; it will appear when toggled
 
         # Discount display (hidden until checkbox checked)
-        self.discount_frame = tk.Frame(self)
+        self.discount_frame = tk.Frame(parent_frame)
         tk.Label(
             self.discount_frame,
             text="Discount:",
@@ -321,14 +335,14 @@ class InvoiceApp(tk.Tk):
         # Do not pack discount_frame now; it will appear when toggled
 
         # Subtotal display
-        self.subtotal_frame = tk.Frame(self)
+        self.subtotal_frame = tk.Frame(parent_frame)
         self.subtotal_frame.pack(fill='x', padx=10, pady=5)
         tk.Label(self.subtotal_frame, text="Subtotal:", font=("Helvetica", 11, "bold")).pack(side='left')
         self.subtotal_var = tk.StringVar(value="0.00")
         tk.Label(self.subtotal_frame, textvariable=self.subtotal_var, font=("Helvetica", 11, "bold"), anchor='e').pack(side='right')
 
         # Generate Invoice button below subtotal
-        self.generate_btn_frame = tk.Frame(self)
+        self.generate_btn_frame = tk.Frame(parent_frame)
         self.generate_btn_frame.pack(fill='x', padx=10, pady=(10, 15))
         self.generate_btn = tk.Button(
             self.generate_btn_frame,
@@ -346,15 +360,21 @@ class InvoiceApp(tk.Tk):
         self.update_add_button_state()
 
         # Enable pressing Enter (Return) to add the item
-        self.bind('<Return>', lambda event: self.add_item())
+        # This binding is on the root window, add_item will need to be tab-aware
+        self.bind('<Return>', lambda event: self.add_item()) 
+
+    def create_connection_pipe_tab(self, parent_frame):
+        # Placeholder for connection pipe UI
+        tk.Label(parent_frame, text="This is the Connection Pipes Invoice Page.", font=("Helvetica", 16)).pack(padx=20, pady=20)
+        tk.Label(parent_frame, text="You can build the specialized UI for connection pipes here.").pack(padx=20, pady=5)
 
     def add_item(self):
         try:
-            grade = self.entries["grade"].get().strip()
-            pn = self.entries["pn"].get().strip()
-            sdr_input = self.entries["sdr"].get().strip()
-            diameter = float(self.entries["diameter"].get().strip())
-
+            grade = self.standard_entries["grade"].get().strip()
+            pn = self.standard_entries["pn"].get().strip()
+            sdr_input = self.standard_entries["sdr"].get().strip()
+            diameter = float(self.standard_entries["diameter"].get().strip())
+            
             # Determine SDR and PN
             if not sdr_input:
                 if pn:
@@ -370,8 +390,8 @@ class InvoiceApp(tk.Tk):
             weight_per_m = load_weight_table(diameter, sdr)
 
             # Determine length and total mass
-            length_input = self.entries["length"].get().strip()
-            mass_input = self.entries["total_mass"].get().strip()
+            length_input = self.standard_entries["length"].get().strip()
+            mass_input = self.standard_entries["total_mass"].get().strip()
             if length_input:
                 length = float(length_input)
                 total_mass = calculate_total_mass(length, diameter, sdr)
@@ -382,8 +402,8 @@ class InvoiceApp(tk.Tk):
                 raise ValueError("Please provide either Length or Total Mass.")
 
             # Determine price per kg and total price, preferring the displayed total price
-            price_input = self.entries["price_per_kg"].get().strip()
-            total_price_input = self.entries["total_price"].get().strip()
+            price_input = self.standard_entries["price_per_kg"].get().strip()
+            total_price_input = self.standard_entries["total_price"].get().strip()
             if total_price_input:
                 # Use the exactly displayed total price to avoid float drift
                 total_price = float(total_price_input)
@@ -410,9 +430,9 @@ class InvoiceApp(tk.Tk):
                 "price_per_kg": price_per_kg,
                 "total_price": total_price,
             }
-            self.items.append(item)
-            item_no = len(self.items)
-            self.tree.insert("", "end", values=(
+            self.standard_items.append(item)
+            item_no = len(self.standard_items)
+            self.standard_tree.insert("", "end", values=(
                 item_no,
                 grade,
                 pn,
@@ -432,13 +452,13 @@ class InvoiceApp(tk.Tk):
 
     def remove_item(self):
         # Remove selected items from the list and treeview
-        selected = self.tree.selection()
+        selected = self.standard_tree.selection()
         # Fallback to focused item if no explicit selection
-        focused = self.tree.focus()
+        focused = self.standard_tree.focus()
         if not selected and focused:
             selected = (focused,)
         # Determine which item to select after deletion
-        children = self.tree.get_children()
+        children = self.standard_tree.get_children()
         next_id = None
         if selected:
             first_id = selected[0]
@@ -454,25 +474,25 @@ class InvoiceApp(tk.Tk):
             return
         # Remove each selected item, adjusting the items list by index
         for item_id in selected:
-            idx = self.tree.index(item_id)
-            self.tree.delete(item_id)
-            self.items.pop(idx)
+            idx = self.standard_tree.index(item_id) # Assumes standard_tree for now
+            self.standard_tree.delete(item_id)
+            self.standard_items.pop(idx) # Assumes standard_items for now
         self.update_subtotal()
         self.update_add_button_state()
         self.update_remove_button_state()
         # Re-number the No. column after removals
         self.refresh_indices()
         # Select the next item if it still exists
-        if next_id and next_id in self.tree.get_children():
-            self.tree.selection_set(next_id)
-            self.tree.focus(next_id)
+        if next_id and next_id in self.standard_tree.get_children():
+            self.standard_tree.selection_set(next_id)
+            self.standard_tree.focus(next_id)
 
     def generate_invoice(self):
         # Optional: At the start, destroy previous action_frame if it exists to avoid stacking buttons
-        if self.action_frame is not None:
+        if hasattr(self, 'action_frame') and self.action_frame is not None:
             self.action_frame.destroy()
             self.action_frame = None
-        if not hasattr(self, 'items') or not self.items:
+        if not self.standard_items:
             messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
             return
         customer = self.customer_entry.get().strip()
@@ -525,7 +545,7 @@ class InvoiceApp(tk.Tk):
         explanation = self.explanation_text_widget.get("1.0", tk.END).strip()
         # Prepare items in the format expected by generate_pdf
         pdf_items = []
-        for it in self.items:
+        for it in self.standard_items: # Assumes standard_items for now
             item_copy = it.copy()
             pdf_items.append({
                 "diameter": item_copy["diameter"],
@@ -645,7 +665,7 @@ class InvoiceApp(tk.Tk):
                                 f"Output directory set to: {self.output_dir}")
 
     def update_subtotal(self):
-        subtotal = sum(item["total_price"] for item in self.items)
+        subtotal = sum(item["total_price"] for item in self.standard_items) # Assumes standard_items
         discount_amount = 0.0
         if self.include_discount_var.get():
             custom = self.custom_discount_var.get().strip()
@@ -770,24 +790,24 @@ class InvoiceApp(tk.Tk):
         self.series_data = series
 
     def on_grade_selected(self, event):
-        grade = self.entries["grade"].get()
+        grade = self.standard_entries["grade"].get()
         # Populate SDR options
         sdrs = sorted(self.series_data.get(grade, {}).keys())
-        self.entries["sdr"]["values"] = sdrs
-        self.entries["sdr"].set('')
+        self.standard_entries["sdr"]["values"] = sdrs
+        self.standard_entries["sdr"].set('')
         # Populate PN options (sorted numerically if possible)
         pns_raw = set(self.series_data.get(grade, {}).values())
         try:
             pns_sorted = sorted(pns_raw, key=lambda x: float(x))
         except ValueError:
             pns_sorted = sorted(pns_raw)
-        self.entries["pn"]["values"] = pns_sorted
-        self.entries["pn"].set('')
+        self.standard_entries["pn"]["values"] = pns_sorted
+        self.standard_entries["pn"].set('')
 
     def on_sdr_selected(self, event):
-        grade = self.entries["grade"].get()
+        grade = self.standard_entries["grade"].get()
         try:
-            sdr = float(self.entries["sdr"].get())
+            sdr = float(self.standard_entries["sdr"].get())
         except ValueError:
             return
         # Populate PN options based on current grade
@@ -796,38 +816,38 @@ class InvoiceApp(tk.Tk):
             pns_sorted = sorted(pns_raw, key=lambda x: float(x))
         except Exception:
             pns_sorted = sorted(pns_raw)
-        self.entries["pn"]["values"] = pns_sorted
+        self.standard_entries["pn"]["values"] = pns_sorted
         # Set current PN based on selected SDR
         mapped_pn = self.series_data.get(grade, {}).get(sdr)
         if mapped_pn:
-            self.entries["pn"].set(mapped_pn)
+            self.standard_entries["pn"].set(mapped_pn)
         else:
-            self.entries["pn"].set('')
+            self.standard_entries["pn"].set('')
         # Populate Diameter options based on selected SDR
         diam_options = self.diameter_data_by_sdr.get(sdr, [])
-        self.entries["diameter"]["values"] = diam_options
-        self.entries["diameter"].set('')
+        self.standard_entries["diameter"]["values"] = diam_options
+        self.standard_entries["diameter"].set('')
 
     def on_pn_selected(self, event):
-        grade = self.entries["grade"].get()
-        pn = self.entries["pn"].get()
+        grade = self.standard_entries["grade"].get()
+        pn = self.standard_entries["pn"].get()
         # Populate SDR options based on current grade
         all_sdrs = sorted(self.series_data.get(grade, {}).keys())
-        self.entries["sdr"]["values"] = all_sdrs
+        self.standard_entries["sdr"]["values"] = all_sdrs
         # Set current SDR based on selected PN
         matching_sdrs = [s for s, p in self.series_data.get(grade, {}).items() if p == pn]
         if matching_sdrs:
-            self.entries["sdr"].set(str(matching_sdrs[0]))
+            self.standard_entries["sdr"].set(str(matching_sdrs[0]))
         else:
-            self.entries["sdr"].set('')
+            self.standard_entries["sdr"].set('')
         # Populate Diameter options based on current SDR
         try:
-            current_sdr = float(self.entries["sdr"].get())
+            current_sdr = float(self.standard_entries["sdr"].get())
         except ValueError:
             return
         diam_options = self.diameter_data_by_sdr.get(current_sdr, [])
-        self.entries["diameter"]["values"] = diam_options
-        self.entries["diameter"].set('')
+        self.standard_entries["diameter"]["values"] = diam_options
+        self.standard_entries["diameter"].set('')
 
     def load_diameter_data(self):
         # Read available diameters from the weight table CSV and group by SDR
@@ -863,92 +883,100 @@ class InvoiceApp(tk.Tk):
     def on_length_changed(self, event):
         # Automatically update total_mass when length is edited
         try:
-            length = float(self.entries["length"].get().strip())
-            diameter = float(self.entries["diameter"].get())
-            sdr = float(self.entries["sdr"].get())
+            length = float(self.standard_entries["length"].get().strip())
+            diameter = float(self.standard_entries["diameter"].get())
+            sdr = float(self.standard_entries["sdr"].get())
             total_mass = calculate_total_mass(length, diameter, sdr)
-            mass_entry = self.entries["total_mass"]
+            mass_entry = self.standard_entries["total_mass"]
             mass_entry.delete(0, tk.END)
             mass_entry.insert(0, str(round(total_mass, 3)))
+            # --- Patch: Also update total_price if price_per_kg is available ---
+            price_per_kg_str = self.standard_entries["price_per_kg"].get().strip()
+            if price_per_kg_str:
+                price_per_kg = float(price_per_kg_str)
+                total_price = total_mass * price_per_kg
+                tp_entry = self.standard_entries["total_price"]
+                tp_entry.delete(0, tk.END)
+                tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
             pass
-
+    
     def on_mass_changed(self, event):
         # Automatically update length when total_mass is edited
         try:
-            total_mass = float(self.entries["total_mass"].get().strip())
-            diameter = float(self.entries["diameter"].get())
-            sdr = float(self.entries["sdr"].get())
+            total_mass = float(self.standard_entries["total_mass"].get().strip())
+            diameter = float(self.standard_entries["diameter"].get())
+            sdr = float(self.standard_entries["sdr"].get())
             length = calculate_length_from_mass(total_mass, diameter, sdr)
-            length_entry = self.entries["length"]
+            length_entry = self.standard_entries["length"]
             length_entry.delete(0, tk.END)
             length_entry.insert(0, str(round(length, 3)))
         except Exception:
             pass
-
+    
     def on_price_changed(self, event):
         # Automatically update total_price when price_per_kg is edited
         try:
-            price_per_kg = float(self.entries["price_per_kg"].get().strip())
-            total_mass = float(self.entries["total_mass"].get().strip())
+            price_per_kg = float(self.standard_entries["price_per_kg"].get().strip())
+            total_mass = float(self.standard_entries["total_mass"].get().strip())
             # Compute total price by multiplying price per kg by total mass
             total_price = total_mass * price_per_kg
-            tp_entry = self.entries["total_price"]
+            tp_entry = self.standard_entries["total_price"]
             tp_entry.delete(0, tk.END)
             tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
             pass
-
+    
     def on_total_price_changed(self, event):
         # Automatically update price_per_kg when total_price is edited
         try:
-            total_price = float(self.entries["total_price"].get().strip())
+            total_price = float(self.standard_entries["total_price"].get().strip())
             # Determine total mass: use entered mass or calculate from length
-            mass_input = self.entries["total_mass"].get().strip()
+            mass_input = self.standard_entries["total_mass"].get().strip()
             if mass_input:
                 total_mass = float(mass_input)
             else:
-                length = float(self.entries["length"].get().strip())
-                diameter = float(self.entries["diameter"].get())
-                sdr = float(self.entries["sdr"].get())
+                length = float(self.standard_entries["length"].get().strip())
+                diameter = float(self.standard_entries["diameter"].get())
+                sdr = float(self.standard_entries["sdr"].get())
                 total_mass = calculate_total_mass(length, diameter, sdr)
             # Compute price per kg by dividing by mass
             price_per_kg = total_price / total_mass
-            pp_entry = self.entries["price_per_kg"]
+            pp_entry = self.standard_entries["price_per_kg"]
             pp_entry.delete(0, tk.END)
             formatted_price = f"{price_per_kg:,.2f}"
             pp_entry.insert(0, formatted_price)
         except Exception:
             pass
-
+    
     def on_diameter_changed(self, event):
         # Recalculate total_mass and total_price based on new diameter and existing length
         try:
-            length = float(self.entries["length"].get().strip())
-            diameter = float(self.entries["diameter"].get().strip())
-            sdr = float(self.entries["sdr"].get().strip())
+            length = float(self.standard_entries["length"].get().strip())
+            diameter = float(self.standard_entries["diameter"].get().strip())
+            sdr = float(self.standard_entries["sdr"].get().strip())
             total_mass = calculate_total_mass(length, diameter, sdr)
-            mass_entry = self.entries["total_mass"]
+            mass_entry = self.standard_entries["total_mass"]
             mass_entry.delete(0, tk.END)
             mass_entry.insert(0, str(round(total_mass, 3)))
-            price_per_kg = float(self.entries["price_per_kg"].get().strip())
+            price_per_kg = float(self.standard_entries["price_per_kg"].get().strip())
             total_price = total_mass * price_per_kg
-            tp_entry = self.entries["total_price"]
+            tp_entry = self.standard_entries["total_price"]
             tp_entry.delete(0, tk.END)
             tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
             pass
-
+    
     def update_add_button_state(self, event=None):
         """Enable the Add Item button only when the required fields are populated."""
-        grade_filled = bool(self.entries["grade"].get().strip())
-        diameter_filled = bool(self.entries["diameter"].get().strip())
-        sdr_filled = bool(self.entries["sdr"].get().strip())
-        pn_filled = bool(self.entries["pn"].get().strip())
-        length_filled = bool(self.entries["length"].get().strip())
-        mass_filled = bool(self.entries["total_mass"].get().strip())
-        price_filled = bool(self.entries["price_per_kg"].get().strip())
-        total_price_filled = bool(self.entries["total_price"].get().strip())
+        grade_filled = bool(self.standard_entries["grade"].get().strip())
+        diameter_filled = bool(self.standard_entries["diameter"].get().strip())
+        sdr_filled = bool(self.standard_entries["sdr"].get().strip())
+        pn_filled = bool(self.standard_entries["pn"].get().strip())
+        length_filled = bool(self.standard_entries["length"].get().strip())
+        mass_filled = bool(self.standard_entries["total_mass"].get().strip())
+        price_filled = bool(self.standard_entries["price_per_kg"].get().strip())
+        total_price_filled = bool(self.standard_entries["total_price"].get().strip())
 
         core_ok = grade_filled and diameter_filled and (sdr_filled or pn_filled)
         qty_ok = length_filled or mass_filled
@@ -963,15 +991,15 @@ class InvoiceApp(tk.Tk):
         # Clear customer entry (preserve invoice number)
         self.customer_entry.delete(0, tk.END)
         # Clear item detail entries
-        for key, widget in self.entries.items():
+        for key, widget in self.standard_entries.items(): # Assumes standard_entries
             if isinstance(widget, ttk.Combobox):
                 widget.set('')
             else:
                 widget.delete(0, tk.END)
         # Clear items list and treeview
-        self.items.clear()
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        self.standard_items.clear() # Assumes standard_items
+        for item in self.standard_tree.get_children(): # Assumes standard_tree
+            self.standard_tree.delete(item)
         # Clear explanation text widget
         self.explanation_text_widget.delete("1.0", tk.END)
         # Hide added value frame if shown
@@ -986,31 +1014,31 @@ class InvoiceApp(tk.Tk):
 
     def refresh_indices(self):
         """Re-number the 'No.' column sequentially."""
-        for idx, iid in enumerate(self.tree.get_children(), start=1):
-            self.tree.set(iid, "no", idx)
+        for idx, iid in enumerate(self.standard_tree.get_children(), start=1): # Assumes standard_tree
+            self.standard_tree.set(iid, "no", idx)
 
     def on_toggle_dark_mode(self):
         # Theme switching will be implemented here.
         pass
-
+    
     def sort_by(self, col):
         """Sort items and treeview by given column."""
-        reverse = self.sort_dirs.get(col, False)
+        reverse = self.standard_sort_dirs.get(col, False) # Assumes standard_sort_dirs
         if col == "no":
             # Toggle between original and reverse order
-            sorted_items = list(self.items)[::-1] if reverse else list(self.items)
+            sorted_items = list(self.standard_items)[::-1] if reverse else list(self.standard_items) # Assumes standard_items
         else:
             try:
-                sorted_items = sorted(self.items, key=lambda i: i[col], reverse=reverse)
+                sorted_items = sorted(self.standard_items, key=lambda i: i[col], reverse=reverse)
             except Exception:
-                sorted_items = sorted(self.items, key=lambda i: str(i[col]), reverse=reverse)
-        self.items = sorted_items
+                sorted_items = sorted(self.standard_items, key=lambda i: str(i[col]), reverse=reverse)
+        self.standard_items = sorted_items
         # Clear existing rows
-        for iid in self.tree.get_children():
-            self.tree.delete(iid)
+        for iid in self.standard_tree.get_children():
+            self.standard_tree.delete(iid)
         # Reinsert rows in sorted order with updated indices
-        for idx, item in enumerate(self.items, start=1):
-            self.tree.insert("", "end", values=(
+        for idx, item in enumerate(self.standard_items, start=1):
+            self.standard_tree.insert("", "end", values=(
                 idx,
                 item["grade"],
                 item["pn"],
@@ -1023,40 +1051,40 @@ class InvoiceApp(tk.Tk):
                 f"{int(item['total_price']):,}"
             ))
         # Toggle sort direction for next click
-        self.sort_dirs[col] = not reverse
+        self.standard_sort_dirs[col] = not reverse
         # Update remove button state
         self.update_remove_button_state()
 
     def on_down_pressed(self, event):
-        children = self.tree.get_children()
+        children = self.standard_tree.get_children() # Assumes standard_tree
         # If nothing is selected, select the first item
-        if children and not self.tree.selection():
+        if children and not self.standard_tree.selection():
                 first = children[0]
-                self.tree.selection_set(first)
-                self.tree.focus(first)
-                self.tree.see(first)
+                self.standard_tree.selection_set(first)
+                self.standard_tree.focus(first)
+                self.standard_tree.see(first)
                 return "break"
         # Otherwise allow default behavior
 
 
     def on_up_pressed(self, event):
-        children = self.tree.get_children()
+        children = self.standard_tree.get_children() # Assumes standard_tree
         # If nothing is selected, select the last item
-        if children and not self.tree.selection():
+        if children and not self.standard_tree.selection():
                 last = children[-1]
-                self.tree.selection_set(last)
-                self.tree.focus(last)
-                self.tree.see(last)
+                self.standard_tree.selection_set(last)
+                self.standard_tree.focus(last)
+                self.standard_tree.see(last)
                 return "break"
         # Otherwise allow default behavior
 
     def on_tree_blank_click(self, event):
         """Deselect the current selection when the user clicks on empty space in the Treeview."""
         # If the click is not on any item row, clear the current selection
-        if not self.tree.identify_row(event.y):
-            self.tree.selection_remove(self.tree.selection())
+        if not self.standard_tree.identify_row(event.y): # Assumes standard_tree
+            self.standard_tree.selection_remove(self.standard_tree.selection())
             self.update_remove_button_state()
-
+            
 if __name__ == "__main__":
     app = InvoiceApp()
     app.mainloop()
