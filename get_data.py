@@ -259,3 +259,166 @@ def get_discount(order_price, csv_filename="discount.csv", subfolder="program fi
 
     return discount_pct
 
+
+
+# New function: connection_type
+def connection_type(csv_filename="connections.csv", subfolder="program files"):
+    """
+    Reads the connections CSV file and returns a sorted list of unique connection types.
+
+    Args:
+        csv_filename (str): CSV filename in the `program files` subdirectory.
+        subfolder (str): Subdirectory under this file's directory.
+
+    Returns:
+        list: Sorted list of unique connection types found in the CSV.
+
+    Raises:
+        FileNotFoundError: If the CSV file does not exist.
+        ValueError: If the CSV file does not contain a 'type' column.
+    """
+    base_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(base_dir, subfolder, csv_filename)
+
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Connections file not found: {csv_path}")
+
+    types = set()
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames or '\ufeffنوع' not in reader.fieldnames:
+            raise ValueError(f"'نوع' column not found in CSV: {csv_path}")
+        for row in reader:
+            value = row.get('\ufeffنوع')
+            if value:
+                types.add(value.strip())
+    return sorted(types)
+
+
+# New function: products_for_connection_type
+def products_for_connection_type(type_value, csv_filename="connections.csv", subfolder="program files"):
+    """
+    Returns a sorted list of unique products ('محصول') for a given connection type ('نوع').
+
+    Args:
+        type_value (str): The value of the connection type to filter on.
+        csv_filename (str): The CSV file name.
+        subfolder (str): Subdirectory for the CSV.
+
+    Returns:
+        list: Sorted list of unique products under the given type.
+
+    Raises:
+        FileNotFoundError: If the CSV does not exist.
+        ValueError: If the required columns are not found.
+    """
+    base_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(base_dir, subfolder, csv_filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Connections file not found: {csv_path}")
+
+    products = set()
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        # Must use BOM for first field
+        if not reader.fieldnames or '\ufeffنوع' not in reader.fieldnames or 'محصول' not in reader.fieldnames:
+            raise ValueError(f"'نوع' or 'محصول' column not found in CSV: {csv_path}")
+        for row in reader:
+            if row.get('\ufeffنوع', '').strip() == type_value.strip():
+                prod = row.get('محصول')
+                if prod:
+                    products.add(prod.strip())
+    return sorted(products)
+
+
+# New function: sizes_for_type_and_product
+def sizes_for_type_and_product(type_value, product_value, csv_filename="connections.csv", subfolder="program files"):
+    """
+    Returns a sorted list of unique sizes ('اندازه (mm)') for a given type and product.
+
+    Args:
+        type_value (str): The value for the '\ufeffنوع' column.
+        product_value (str): The value for the 'محصول' column.
+        csv_filename (str): The CSV file name.
+        subfolder (str): The folder for the CSV file.
+
+    Returns:
+        list: Sorted list of unique sizes for the type and product.
+
+    Raises:
+        FileNotFoundError: If the CSV is missing.
+        ValueError: If columns are not found.
+    """
+    base_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(base_dir, subfolder, csv_filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Connections file not found: {csv_path}")
+
+    sizes = set()
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if (
+            not reader.fieldnames or
+            '\ufeffنوع' not in reader.fieldnames or
+            'محصول' not in reader.fieldnames or
+            'اندازه (mm)' not in reader.fieldnames
+        ):
+            raise ValueError(f"Expected columns not found in CSV: {csv_path}")
+        for row in reader:
+            if (
+                row.get('\ufeffنوع', '').strip() == type_value.strip() and
+                row.get('محصول', '').strip() == product_value.strip()
+            ):
+                size = row.get('اندازه (mm)')
+                if size:
+                    sizes.add(size.strip())
+    # Optionally, convert to float for numeric sort, else return as string sort
+    try:
+        return sorted(sizes, key=lambda x: float(x.replace(',', '').replace(' ', '')))
+    except Exception:
+        return sorted(sizes)
+
+
+# New function: row_for_type_product_size
+def row_for_type_product_size(type_value, product_value, size_value, csv_filename="connections.csv", subfolder="program files"):
+    """
+    Returns a dict of all data for the row matching the given type, product, and size.
+
+    Args:
+        type_value (str): The value for the '\ufeffنوع' column.
+        product_value (str): The value for the 'محصول' column.
+        size_value (str): The value for the 'اندازه (mm)' column.
+        csv_filename (str): The CSV file name.
+        subfolder (str): The folder for the CSV file.
+
+    Returns:
+        dict: The row data as a dict if found, else None.
+
+    Raises:
+        FileNotFoundError: If the CSV is missing.
+        ValueError: If columns are not found.
+    """
+    base_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(base_dir, subfolder, csv_filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Connections file not found: {csv_path}")
+
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if (
+            not reader.fieldnames or
+            '\ufeffنوع' not in reader.fieldnames or
+            'محصول' not in reader.fieldnames or
+            'اندازه (mm)' not in reader.fieldnames
+        ):
+            raise ValueError(f"Expected columns not found in CSV: {csv_path}")
+        for row in reader:
+            if (
+                row.get('\ufeffنوع', '').strip() == type_value.strip() and
+                row.get('محصول', '').strip() == product_value.strip() and
+                row.get('اندازه (mm)', '').strip() == size_value.strip()
+            ):
+                # Return the row as a dict (with trimmed values)
+                return {k: (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
+    return None
+
