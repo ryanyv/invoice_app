@@ -528,7 +528,7 @@ class InvoiceApp(tk.Tk):
 
         # Determine the new highest number to save in the counter file.
         # This will be the maximum of what was on record and the current invoice number being used.
-        new_highest_for_record = max(highest_invoice_on_record, current_invoice_int_for_pdf)
+        new_highest_for_record = current_invoice_int_for_pdf
 
         # Save this new highest number to the counter file
         try:
