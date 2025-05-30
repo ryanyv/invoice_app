@@ -3,11 +3,11 @@ from tkinter import ttk, messagebox, filedialog
 import datetime
 import shutil
 
-from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount
+from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount,connection_type,products_for_connection_type,sizes_for_type_and_product,row_for_type_product_size,read_all_connections,get_price_per_piece
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass
 from create_pdf import (
     generate_pdf, to_persian_digits, generate_pdf_with_added_value, generate_pdf_with_discount,
-    generate_pdf_with_custom_discount, generate_pdf_with_discount_and_added_value, generate_pdf_with_custom_discount_and_added_value
+    generate_pdf_with_custom_discount, generate_pdf_with_discount_and_added_value, generate_pdf_with_custom_discount_and_added_value,generate_connection_invoice_pdf
 )
 
 import os
@@ -364,9 +364,456 @@ class InvoiceApp(tk.Tk):
         self.bind('<Return>', lambda event: self.add_item()) 
 
     def create_connection_pipe_tab(self, parent_frame):
-        # Placeholder for connection pipe UI
-        tk.Label(parent_frame, text="This is the Connection Pipes Invoice Page.", font=("Helvetica", 16)).pack(padx=20, pady=20)
-        tk.Label(parent_frame, text="You can build the specialized UI for connection pipes here.").pack(padx=20, pady=5)
+        # --- State for connection tab ---
+        self.connection_items = []
+        self.connection_sort_dirs = {
+            "no": False, "type": False, "product": False, "size": False,
+            "quantity": False, "price_per_piece": False, "total_price": False
+        }
+        # --- Customer Name and Invoice Number ---
+        customer_frame = tk.Frame(parent_frame)
+        customer_frame.pack(pady=10, fill='x', padx=10)
+        tk.Label(customer_frame, text="Customer Name:").pack(side='left')
+        self.connection_customer_entry = tk.Entry(customer_frame)
+        self.connection_customer_entry.pack(side='left', fill='x', expand=True, padx=5)
+        # Load default invoice number from persistent counter file
+        try:
+            with open(self.counter_file, "r", encoding="utf-8") as cf:
+                data = json.load(cf)
+                last_used = int(data.get("counter", 0))
+        except Exception:
+            last_used = 0
+        default_inv_num = str(last_used + 1)
+        invoice_frame = tk.Frame(parent_frame)
+        invoice_frame.pack(pady=5, fill='x', padx=10)
+        tk.Label(invoice_frame, text="Invoice Number:").pack(side='left')
+        self.connection_invoice_entry = tk.Entry(invoice_frame)
+        self.connection_invoice_entry.insert(0, default_inv_num)
+        self.connection_invoice_entry.pack(side='left', fill='x', expand=True, padx=5)
+
+        # --- Item Details ---
+        item_frame = tk.LabelFrame(parent_frame, text="Item Details")
+        item_frame.pack(fill='x', padx=10, pady=5)
+        for col in (1, 3, 5, 7):
+            item_frame.grid_columnconfigure(col, weight=1)
+        # Entries: "Type", "Product", "Size", "Quantity", "Price per Piece", "Total Price"
+        self.connection_entries = {}
+        # Type
+        tk.Label(item_frame, text="Type:").grid(row=0, column=0, sticky='e', padx=2, pady=2)
+        type_values = connection_type()
+        type_cb = ttk.Combobox(item_frame, values=type_values, state="readonly")
+        type_cb.grid(row=0, column=1, sticky='w', padx=2, pady=2)
+        self.connection_entries["type"] = type_cb
+        # Product
+        tk.Label(item_frame, text="Product:").grid(row=0, column=2, sticky='e', padx=2, pady=2)
+        product_cb = ttk.Combobox(item_frame, values=[], state="readonly")
+        product_cb.grid(row=0, column=3, sticky='w', padx=2, pady=2)
+        self.connection_entries["product"] = product_cb
+        # Size
+        tk.Label(item_frame, text="Size:").grid(row=0, column=4, sticky='e', padx=2, pady=2)
+        size_cb = ttk.Combobox(item_frame, values=[], state="readonly")
+        size_cb.grid(row=0, column=5, sticky='w', padx=2, pady=2)
+        self.connection_entries["size"] = size_cb
+        # Quantity
+        tk.Label(item_frame, text="Quantity:").grid(row=0, column=6, sticky='e', padx=2, pady=2)
+        quantity_entry = tk.Entry(item_frame, width=10)
+        quantity_entry.grid(row=0, column=7, sticky='w', padx=2, pady=2)
+        self.connection_entries["quantity"] = quantity_entry
+        # Price per Piece
+        tk.Label(item_frame, text="Price per Piece:").grid(row=1, column=0, sticky='e', padx=2, pady=2)
+        price_entry = tk.Entry(item_frame, width=15, state="readonly")
+        price_entry.grid(row=1, column=1, sticky='w', padx=2, pady=2)
+        self.connection_entries["price_per_piece"] = price_entry
+        # Total Price
+        tk.Label(item_frame, text="Total Price:").grid(row=1, column=2, sticky='e', padx=2, pady=2)
+        total_entry = tk.Entry(item_frame, width=15, state="readonly")
+        total_entry.grid(row=1, column=3, sticky='w', padx=2, pady=2)
+        self.connection_entries["total_price"] = total_entry
+
+        # --- Helper functions for dynamic dropdowns and calculations ---
+        def on_type_selected(event=None):
+            t = self.connection_entries["type"].get()
+            products = products_for_connection_type(t) if t else []
+            self.connection_entries["product"]["values"] = products
+            self.connection_entries["product"].set('')
+            self.connection_entries["size"]["values"] = []
+            self.connection_entries["size"].set('')
+            update_price_and_total()
+            update_add_button_state()
+
+        def on_product_selected(event=None):
+            t = self.connection_entries["type"].get()
+            p = self.connection_entries["product"].get()
+            sizes = sizes_for_type_and_product(t, p) if t and p else []
+            self.connection_entries["size"]["values"] = sizes
+            self.connection_entries["size"].set('')
+            update_price_and_total()
+            update_add_button_state()
+
+        def on_size_selected(event=None):
+            update_price_and_total()
+            update_add_button_state()
+
+        def on_quantity_changed(event=None):
+            update_price_and_total()
+            update_add_button_state()
+
+        def update_price_and_total():
+            t = self.connection_entries["type"].get()
+            p = self.connection_entries["product"].get()
+            s = self.connection_entries["size"].get()
+            price = ""
+            if t and p and s:
+                try:
+                    val = get_price_per_piece(t, p, s)
+                    if val is not None:
+                        price = str(int(round(val)))
+                    else:
+                        price = ""
+                except Exception:
+                    price = ""
+            self.connection_entries["price_per_piece"].config(state="normal")
+            self.connection_entries["price_per_piece"].delete(0, tk.END)
+            if price:
+                self.connection_entries["price_per_piece"].insert(0, price)
+            self.connection_entries["price_per_piece"].config(state="readonly")
+            # Update total price
+            qty_str = self.connection_entries["quantity"].get().strip()
+            try:
+                qty = float(qty_str)
+            except Exception:
+                qty = None
+            if price and qty is not None:
+                total = int(round(float(price) * qty))
+                self.connection_entries["total_price"].config(state="normal")
+                self.connection_entries["total_price"].delete(0, tk.END)
+                self.connection_entries["total_price"].insert(0, str(total))
+                self.connection_entries["total_price"].config(state="readonly")
+            else:
+                self.connection_entries["total_price"].config(state="normal")
+                self.connection_entries["total_price"].delete(0, tk.END)
+                self.connection_entries["total_price"].config(state="readonly")
+
+        def update_add_button_state(event=None):
+            t = self.connection_entries["type"].get().strip()
+            p = self.connection_entries["product"].get().strip()
+            s = self.connection_entries["size"].get().strip()
+            qty = self.connection_entries["quantity"].get().strip()
+            price = self.connection_entries["price_per_piece"].get().strip()
+            total = self.connection_entries["total_price"].get().strip()
+            valid = bool(t and p and s and qty and price and total)
+            try:
+                if float(qty) <= 0:
+                    valid = False
+            except Exception:
+                valid = False
+            if valid:
+                self.connection_add_btn.config(state="normal")
+            else:
+                self.connection_add_btn.config(state="disabled")
+
+        def on_down_pressed(event):
+            children = self.connection_tree.get_children()
+            if children and not self.connection_tree.selection():
+                first = children[0]
+                self.connection_tree.selection_set(first)
+                self.connection_tree.focus(first)
+                self.connection_tree.see(first)
+                return "break"
+
+        def on_up_pressed(event):
+            children = self.connection_tree.get_children()
+            if children and not self.connection_tree.selection():
+                last = children[-1]
+                self.connection_tree.selection_set(last)
+                self.connection_tree.focus(last)
+                self.connection_tree.see(last)
+                return "break"
+
+        def on_tree_blank_click(event):
+            if not self.connection_tree.identify_row(event.y):
+                self.connection_tree.selection_remove(self.connection_tree.selection())
+                update_remove_button_state()
+
+        # Bindings for dynamic updates
+        type_cb.bind("<<ComboboxSelected>>", on_type_selected)
+        product_cb.bind("<<ComboboxSelected>>", on_product_selected)
+        size_cb.bind("<<ComboboxSelected>>", on_size_selected)
+        quantity_entry.bind("<KeyRelease>", on_quantity_changed)
+        quantity_entry.bind("<FocusOut>", on_quantity_changed)
+
+        # --- Add Item Button ---
+        self.connection_add_btn = tk.Button(
+            item_frame, text="Add Item", state="disabled", font=("Helvetica", 10, "bold"),
+            command=lambda: add_connection_item()
+        )
+        self.connection_add_btn.grid(row=1, column=7, padx=2, pady=2, sticky='w')
+
+        # --- Treeview for connection items ---
+        columns = ("no", "type", "product", "size", "quantity", "price_per_piece", "total_price")
+        tree_frame = tk.Frame(parent_frame)
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        self.connection_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=8)
+        headings = ["No.", "Type", "Product", "Size", "Quantity", "Price per Piece", "Total Price"]
+        for col, hd in zip(columns, headings):
+            if col == "no":
+                self.connection_tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
+            else:
+                self.connection_tree.column(col, width=110, minwidth=70, stretch=True, anchor='center')
+            self.connection_tree.heading(col, text=hd, command=lambda _col=col: sort_by(_col))
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.connection_tree.yview)
+        self.connection_tree.configure(yscrollcommand=vsb.set)
+        self.connection_tree.pack(side='left', fill='both', expand=True)
+        vsb.pack(side='right', fill='y')
+        self.connection_tree.focus_set()
+        self.connection_tree.bind("<<TreeviewSelect>>", self.update_remove_button_state)
+        self.connection_tree.bind("<Delete>", lambda event: remove_connection_item(), add="+")
+        self.connection_tree.bind("<BackSpace>", lambda event: remove_connection_item(), add="+")
+        self.connection_tree.bind("<KeyPress-Down>", on_down_pressed, add="+")
+        self.connection_tree.bind("<KeyPress-Up>", on_up_pressed, add="+")
+        self.connection_tree.bind("<ButtonRelease-1>", on_tree_blank_click, add="+")
+
+        # --- Subtotal display ---
+        subtotal_frame = tk.Frame(parent_frame)
+        subtotal_frame.pack(fill='x', padx=10, pady=5)
+        tk.Label(subtotal_frame, text="Subtotal:", font=("Helvetica", 11, "bold")).pack(side='left')
+        self.connection_subtotal_var = tk.StringVar(value="0.00")
+        tk.Label(subtotal_frame, textvariable=self.connection_subtotal_var, font=("Helvetica", 11, "bold"), anchor='e').pack(side='right')
+
+        # --- Generate Invoice Button ---
+        generate_btn_frame = tk.Frame(parent_frame)
+        generate_btn_frame.pack(fill='x', padx=10, pady=(10, 15))
+        self.connection_generate_btn = tk.Button(
+            generate_btn_frame,
+            text="Generate Invoice",
+            command=lambda: generate_connection_invoice(),
+            font=("Helvetica", 13, "bold"),
+            bg="#d3d3d3",
+            fg="black",
+            height=2,
+        )
+        self.connection_generate_btn.pack(fill='x')
+
+        # --- Item add/remove/clear logic ---
+        def add_connection_item():
+            try:
+                t = self.connection_entries["type"].get().strip()
+                p = self.connection_entries["product"].get().strip()
+                s = self.connection_entries["size"].get().strip()
+                qty_str = self.connection_entries["quantity"].get().strip()
+                price_str = self.connection_entries["price_per_piece"].get().strip()
+                total_str = self.connection_entries["total_price"].get().strip()
+                if not (t and p and s and qty_str and price_str and total_str):
+                    raise ValueError("Fill all fields.")
+                qty = float(qty_str)
+                price = float(price_str)
+                total = float(total_str)
+                item = {
+                    "type": t,
+                    "product": p,
+                    "size": s,
+                    "quantity": qty,
+                    "price_per_piece": price,
+                    "total_price": total,
+                }
+                self.connection_items.append(item)
+                item_no = len(self.connection_items)
+                self.connection_tree.insert("", "end", values=(
+                    item_no, t, p, s, qty, f"{int(price):,}", f"{int(total):,}"
+                ))
+                update_subtotal()
+                clear_connection_entries()
+                update_add_button_state()
+            except Exception as e:
+                messagebox.showerror("Error Adding Item", str(e))
+
+        def remove_connection_item():
+            selected = self.connection_tree.selection()
+            focused = self.connection_tree.focus()
+            if not selected and focused:
+                selected = (focused,)
+            children = self.connection_tree.get_children()
+            next_id = None
+            if selected:
+                first_id = selected[0]
+                if first_id in children:
+                    idx = children.index(first_id)
+                    if idx < len(children) - 1:
+                        next_id = children[idx + 1]
+                    elif idx > 0:
+                        next_id = children[idx - 1]
+            if not selected:
+                messagebox.showwarning("No Selection", "Please select an item to remove.")
+                return
+            # Remove from both list and tree
+            for item_id in selected:
+                idx = self.connection_tree.index(item_id)
+                self.connection_tree.delete(item_id)
+                self.connection_items.pop(idx)
+            update_subtotal()
+            update_add_button_state()
+            update_remove_button_state()
+            refresh_indices()
+            if next_id and next_id in self.connection_tree.get_children():
+                self.connection_tree.selection_set(next_id)
+                self.connection_tree.focus(next_id)
+
+        def clear_connection_entries():
+            for k, widget in self.connection_entries.items():
+                if isinstance(widget, ttk.Combobox):
+                    widget.set('')
+                else:
+                    widget.config(state="normal")
+                    widget.delete(0, tk.END)
+                    if k in ("price_per_piece", "total_price"):
+                        widget.config(state="readonly")
+
+        def update_subtotal():
+            subtotal = sum(item["total_price"] for item in self.connection_items)
+            self.connection_subtotal_var.set(f"{int(subtotal):,}")
+
+        def update_remove_button_state(event=None):
+            # No-op, placeholder for possible future UI
+            pass
+
+        def refresh_indices():
+            for idx, iid in enumerate(self.connection_tree.get_children(), start=1):
+                self.connection_tree.set(iid, "no", idx)
+
+        def sort_by(col):
+            reverse = self.connection_sort_dirs.get(col, False)
+            if col == "no":
+                sorted_items = list(self.connection_items)[::-1] if reverse else list(self.connection_items)
+            else:
+                try:
+                    sorted_items = sorted(self.connection_items, key=lambda i: i[col], reverse=reverse)
+                except Exception:
+                    sorted_items = sorted(self.connection_items, key=lambda i: str(i[col]), reverse=reverse)
+            self.connection_items = sorted_items
+            for iid in self.connection_tree.get_children():
+                self.connection_tree.delete(iid)
+            for idx, item in enumerate(self.connection_items, start=1):
+                self.connection_tree.insert("", "end", values=(
+                    idx, item["type"], item["product"], item["size"], item["quantity"],
+                    f"{int(item['price_per_piece']):,}", f"{int(item['total_price']):,}"
+                ))
+            self.connection_sort_dirs[col] = not reverse
+            update_remove_button_state()
+
+        def on_down_pressed(event):
+            children = self.connection_tree.get_children()
+            if children and not self.connection_tree.selection():
+                first = children[0]
+                self.connection_tree.selection_set(first)
+                self.connection_tree.focus(first)
+                self.connection_tree.see(first)
+                return "break"
+
+        def on_up_pressed(event):
+            children = self.connection_tree.get_children()
+            if children and not self.connection_tree.selection():
+                last = children[-1]
+                self.connection_tree.selection_set(last)
+                self.connection_tree.focus(last)
+                self.connection_tree.see(last)
+                return "break"
+
+        def on_tree_blank_click(event):
+            if not self.connection_tree.identify_row(event.y):
+                self.connection_tree.selection_remove(self.connection_tree.selection())
+                update_remove_button_state()
+
+        def generate_connection_invoice():
+            if not self.connection_items:
+                messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
+                return
+            customer = self.connection_customer_entry.get().strip()
+            if not customer:
+                messagebox.showwarning("Missing Customer", "Please enter the customer name.")
+                return
+            # Use persistent counter file for invoice numbers
+            counter_path = self.counter_file
+            try:
+                with open(counter_path, "r", encoding="utf-8") as cf:
+                    data = json.load(cf)
+                    highest_invoice_on_record = int(data.get("counter", 0))
+            except Exception:
+                highest_invoice_on_record = 0
+            user_entered_invoice_str = self.connection_invoice_entry.get().strip()
+            if user_entered_invoice_str:
+                try:
+                    current_invoice_str_for_pdf = user_entered_invoice_str
+                    current_invoice_int_for_pdf = int(current_invoice_str_for_pdf)
+                except ValueError:
+                    messagebox.showerror("Invalid Invoice Number", f"The provided invoice number '{user_entered_invoice_str}' is not a valid integer.")
+                    return
+            else:
+                current_invoice_int_for_pdf = highest_invoice_on_record + 1
+                current_invoice_str_for_pdf = str(current_invoice_int_for_pdf)
+            new_highest_for_record = current_invoice_int_for_pdf
+            try:
+                with open(counter_path, "w", encoding="utf-8") as cf:
+                    json.dump({"counter": new_highest_for_record}, cf)
+                self.connection_invoice_entry.delete(0, tk.END)
+                self.connection_invoice_entry.insert(0, str(new_highest_for_record + 1))
+            except Exception as e:
+                messagebox.showwarning("Counter File Update", f"Could not update counter file '{counter_path}':\n{e}")
+            invoice_number = current_invoice_str_for_pdf
+            # Prepare items for PDF
+            pdf_items = []
+            for it in self.connection_items:
+                pdf_items.append({
+                    "type": it["type"],
+                    "product": it["product"],
+                    "size": it["size"],
+                    "quantity": it["quantity"],
+                    "price_per_piece": it["price_per_piece"],
+                    "total_price": it["total_price"],
+                })
+            # Use a PDF generator for connections (must be implemented elsewhere)
+            try:
+                from create_pdf import generate_connection_invoice_pdf
+            except ImportError:
+                messagebox.showerror("PDF Generation", "generate_connection_invoice_pdf not found.")
+                return
+            pdf_result = None
+            try:
+                gen_time = time.time()
+                pdf_result = generate_connection_invoice_pdf(
+                    customer, invoice_number, pdf_items, output_dir=self.output_dir
+                )
+                if pdf_result is None:
+                    pattern = os.path.join(self.output_dir, f"*{invoice_number}*.pdf")
+                    matches = glob.glob(pattern)
+                    if matches:
+                        matches.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                        pdf_path = matches[0]
+                    else:
+                        all_pdfs = glob.glob(os.path.join(self.output_dir, "*.pdf"))
+                        new_pdfs = [p for p in all_pdfs if os.path.getmtime(p) >= gen_time]
+                        if new_pdfs:
+                            new_pdfs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                            pdf_path = new_pdfs[0]
+                        else:
+                            raise ValueError(f"PDF generation failed: no PDF found in '{self.output_dir}' for invoice {invoice_number}")
+                elif isinstance(pdf_result, bytes):
+                    pdf_path = os.path.join(self.output_dir, f"{customer}_{invoice_number}.pdf")
+                    with open(pdf_path, "wb") as f:
+                        f.write(pdf_result)
+                elif isinstance(pdf_result, (str, pathlib.Path)):
+                    pdf_path = str(pdf_result)
+                else:
+                    raise ValueError(f"PDF generation failed: unexpected return type {type(pdf_result)}: {repr(pdf_result)}")
+                if not os.path.exists(pdf_path):
+                    raise ValueError(f"PDF generation failed: file '{pdf_path}' does not exist.")
+                messagebox.showinfo("Invoice Created", f"Invoice #{invoice_number} generated successfully.\nSaved to: {pdf_path}")
+            except Exception as e:
+                message = str(e)
+                try:
+                    message += f"\nReturned: {repr(pdf_result)}"
+                except Exception:
+                    pass
+                messagebox.showerror("PDF Generation Failed", message)
 
     def add_item(self):
         try:

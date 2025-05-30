@@ -954,3 +954,132 @@ if __name__ == "__main__":
 
 
     main()
+
+
+def generate_connection_invoice_pdf(
+    customer_name: str,
+    invoice_number: str,
+    items: list[dict],
+    output_dir: Optional[str] = None,
+    explanation_text: Optional[str] = None
+):
+    """
+    Generates a PDF invoice for connection items (اتصالات), with columns:
+    نوع اتصال | محصول | سایز | قیمت واحد | قیمت کل
+    All headers are in Persian, RTL-shaped.
+    """
+    # Determine output directory
+    if output_dir is None:
+        output_dir = os.path.join(os.path.dirname(__file__), "خروجی")
+    os.makedirs(output_dir, exist_ok=True)
+
+    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    sh_company = str(get_display(reshape(COMPANY_NAME)))
+    sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
+    sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
+    label_cust = str(get_display(reshape("نام مشتری:")))
+    sh_customer_name = str(get_display(reshape(customer_name)))
+
+    pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
+    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
+
+    def _draw_logo(canvas, _doc):
+        if os.path.exists(logo_path):
+            x = _doc.leftMargin
+            y = A4[1] - _doc.topMargin - 60
+            canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
+
+    elements = []
+    title_style = ParagraphStyle(
+        name="CompanyTitle",
+        fontName=DEFAULT_FONT,
+        fontSize=18,
+        alignment=TA_CENTER,
+        leading=22
+    )
+    elements.append(Paragraph(sh_company, title_style))
+    elements.append(Spacer(1, 12))
+
+    # Customer and invoice info table
+    header = [["", sh_date], ["", sh_inv], ["", f"{sh_customer_name}{label_cust}"]]
+    table = Table(header, colWidths=[100, 400])
+    table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONT', (0, 0), (-1, -1), DEFAULT_FONT, 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 20))
+
+    # Table headers: نوع اتصال | محصول | سایز | قیمت واحد | قیمت کل (RTL order, so reverse for display)
+    headers_text = ["نوع اتصال", "محصول", "سایز", "قیمت واحد", "قیمت کل"]
+    headers = [str(get_display(reshape(h))) for h in headers_text]
+    headers = list(reversed(headers))
+    data = [headers]
+
+    total_price_all = 0.0
+    for itm in items:
+        # All values as string, prices as Persian digits with thousands separator
+        type_val   = str(get_display(reshape(str(itm.get("type", "")))))
+        product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        size_val   = str(get_display(reshape(str(itm.get("size", ""))))
+                        )  # size can be string or number
+        unit_price = itm.get("unit_price", 0)
+        total_price = itm.get("total_price", 0)
+        total_price_all += total_price
+        unit_price_str = str(get_display(reshape(f"{int(unit_price):,}")))
+        total_price_str = str(get_display(reshape(f"{int(total_price):,}")))
+        row = [
+            type_val,
+            product_val,
+            size_val,
+            unit_price_str,
+            total_price_str,
+        ]
+        data.append(list(reversed(row)))
+
+    # Add total row
+    sh_total_label = str(get_display(reshape("جمع کل")))
+    sh_total_price = str(get_display(reshape(f"{int(total_price_all):,}")))
+    total_row = ["", "", "", sh_total_label, sh_total_price]
+    data.append(list(reversed(total_row)))
+
+    # Table column widths: (RTL order) [قیمت کل, قیمت واحد, سایز, محصول, نوع اتصال]
+    tbl = Table(
+        data,
+        repeatRows=1,
+        colWidths=[80, 80, 80, 120, 120]
+    )
+    tbl.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('FONT', (0, 0), (-1, -1), DEFAULT_FONT, 10),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, -1), (1, -1), colors.lightgrey),
+        ('ALIGN', (1, len(data)-1), (1, len(data)-1), 'LEFT'),
+    ]))
+    elements.append(tbl)
+
+    # Add explanation text if provided
+    if explanation_text and explanation_text.strip():
+        elements.append(Spacer(1, 24))
+        sh_explanation_label = str(get_display(reshape("توضیحات:")))
+        sh_explanation = str(get_display(reshape(explanation_text)))
+        explanation_label_style = ParagraphStyle(
+            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, spaceBefore=6
+        )
+        explanation_text_style = ParagraphStyle(
+            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            alignment=TA_RIGHT, leading=14, rightIndent=0
+        )
+        elements.append(Paragraph(sh_explanation_label, explanation_label_style))
+        elements.append(Paragraph(sh_explanation, explanation_text_style))
+        elements.append(Spacer(1, 12))
+
+    doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
+    print(f"Connection invoice PDF saved to: {pdf_file}")
+    return pdf_file  
