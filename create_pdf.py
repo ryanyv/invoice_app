@@ -1046,11 +1046,24 @@ def generate_connection_invoice_pdf(
     total_row = ["", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
-    # Table column widths: (RTL order) [قیمت کل, قیمت واحد, سایز, محصول, نوع اتصال]
+    # --- Dynamically calculate column widths for all columns ---
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    col_font = DEFAULT_FONT
+    col_font_size = 10
+
+    # `data` already contains all rows (header, items, total) in display order: [قیمت کل, قیمت واحد, سایز, محصول, نوع اتصال]
+    num_cols = len(data[0])
+    col_widths = []
+    for idx in range(num_cols):
+        max_w = max(stringWidth(str(row[idx]), col_font, col_font_size) for row in data)
+        col_widths.append(max_w + 20)  # add small margin
+
+    # Create the table with auto-sized columns
     tbl = Table(
         data,
         repeatRows=1,
-        colWidths=[80, 80, 80, 120, 120]
+        colWidths=col_widths
     )
     tbl.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
