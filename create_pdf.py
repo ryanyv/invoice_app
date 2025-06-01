@@ -965,7 +965,7 @@ def generate_connection_invoice_pdf(
 ):
     """
     Generates a PDF invoice for connection items (اتصالات), with columns:
-    نوع اتصال | محصول | سایز | قیمت واحد | قیمت کل
+    نوع اتصال | محصول | سایز | تعداد | قیمت واحد | قیمت کل
     All headers are in Persian, RTL-shaped.
     """
     # Determine output directory
@@ -1013,8 +1013,8 @@ def generate_connection_invoice_pdf(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    # Table headers: نوع اتصال | محصول | سایز | قیمت واحد | قیمت کل (RTL order, so reverse for display)
-    headers_text = ["نوع اتصال", "محصول", "سایز", "قیمت واحد", "قیمت کل"]
+    # Table headers: نوع اتصال | محصول | سایز | تعداد | قیمت واحد | قیمت کل (RTL order, so reverse for display)
+    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1024,26 +1024,29 @@ def generate_connection_invoice_pdf(
         # All values as string, prices as Persian digits with thousands separator
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
-        size_val   = str(get_display(reshape(str(itm.get("size", ""))))
-                        )  # size can be string or number
+        size_val   = str(get_display(reshape(str(itm.get("size", "")))))
+        quantity = itm.get("quantity", 1)
+        quantity_val = str(get_display(reshape(str(int(quantity)))))
         unit_price = itm.get("unit_price", 0)
         total_price = itm.get("total_price", 0)
         total_price_all += total_price
         unit_price_str = str(get_display(reshape(f"{int(unit_price):,}")))
         total_price_str = str(get_display(reshape(f"{int(total_price):,}")))
+        # Order: type, product, size, quantity, unit_price, total_price
         row = [
             type_val,
             product_val,
             size_val,
+            quantity_val,
             unit_price_str,
             total_price_str,
         ]
         data.append(list(reversed(row)))
 
-    # Add total row
+    # Add total row (align with new columns: [نوع اتصال, محصول, سایز, تعداد, قیمت واحد, قیمت کل])
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(total_price_all):,}")))
-    total_row = ["", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     # --- Dynamically calculate column widths for all columns ---
