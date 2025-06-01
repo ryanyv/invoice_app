@@ -512,21 +512,29 @@ class InvoiceApp(tk.Tk):
         type_cb = ttk.Combobox(item_frame, values=type_values, state="readonly")
         type_cb.grid(row=0, column=1, sticky='w', padx=2, pady=2)
         self.connection_entries["type"] = type_cb
+        # Add Enter key binding for Type combobox
+        type_cb.bind('<Return>', lambda e: self.add_connection_item_action())
         # Product
         tk.Label(item_frame, text="Product:").grid(row=0, column=2, sticky='e', padx=2, pady=2)
-        product_cb = ttk.Combobox(item_frame, values=[], state="readonly")
+        product_cb = ttk.Combobox(item_frame, values=[], state="readonly", width=32)
         product_cb.grid(row=0, column=3, sticky='w', padx=2, pady=2)
         self.connection_entries["product"] = product_cb
+        # Add Enter key binding for Product combobox
+        product_cb.bind('<Return>', lambda e: self.add_connection_item_action())
         # Size
         tk.Label(item_frame, text="Size:").grid(row=0, column=4, sticky='e', padx=2, pady=2)
         size_cb = ttk.Combobox(item_frame, values=[], state="readonly")
         size_cb.grid(row=0, column=5, sticky='w', padx=2, pady=2)
         self.connection_entries["size"] = size_cb
+        # Add Enter key binding for Size combobox
+        size_cb.bind('<Return>', lambda e: self.add_connection_item_action())
         # Quantity
         tk.Label(item_frame, text="Quantity:").grid(row=0, column=6, sticky='e', padx=2, pady=2)
         quantity_entry = tk.Entry(item_frame, width=10)
         quantity_entry.grid(row=0, column=7, sticky='w', padx=2, pady=2)
         self.connection_entries["quantity"] = quantity_entry
+        # Add Enter key binding for Quantity entry
+        quantity_entry.bind('<Return>', lambda e: self.add_connection_item_action())
         # Price per Piece
         tk.Label(item_frame, text="Price per Piece:").grid(row=1, column=0, sticky='e', padx=2, pady=2)
         price_entry = tk.Entry(item_frame, width=15, state="readonly")
@@ -561,6 +569,8 @@ class InvoiceApp(tk.Tk):
         for col, hd in zip(columns, headings):
             if col == "no":
                 self.connection_tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
+            elif col == "product":
+                self.connection_tree.column(col, width=220, minwidth=120, stretch=True, anchor='center')
             else:
                 self.connection_tree.column(col, width=110, minwidth=70, stretch=True, anchor='center')
             self.connection_tree.heading(col, text=hd, command=lambda _col=col: sort_by(_col))
@@ -988,12 +998,7 @@ class InvoiceApp(tk.Tk):
         assert self.notebook is not None, "Notebook has not been initialized"
         current_tab_index = self.notebook.index(self.notebook.select())
         if current_tab_index == 0: # Standard Invoice Tab
-            # Check if the "Add Item" button for standard items is enabled
-            # This check is implicit as add_item() will raise errors if fields are bad
             self.add_item()
-        elif current_tab_index == 1: # Connection Pipes Tab
-            if self.connection_add_btn.cget('state') == 'normal':
-                self.add_connection_item_action()
 
     def remove_item(self):
         # Remove selected items from the list and treeview
