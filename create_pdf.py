@@ -2,7 +2,7 @@ import os
 from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass, calculate_price_per_kg_from_total
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -82,7 +82,7 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
     # Shape the customer name text for RTL
     sh_customer_name = str(get_display(reshape(customer_name)))
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
 
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
@@ -213,7 +213,7 @@ def generate_pdf_with_added_value(
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
 
     # Document setup
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
@@ -347,7 +347,7 @@ def generate_pdf_with_discount(
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
 
     # Document setup
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
@@ -505,7 +505,7 @@ def generate_pdf_with_custom_discount(
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
 
     # Document setup
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
@@ -640,7 +640,7 @@ def generate_pdf_with_discount_and_added_value(
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
 
     # Document setup
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
@@ -807,7 +807,7 @@ def generate_pdf_with_custom_discount_and_added_value(
 
     # Safe filename and document setup
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
@@ -981,7 +981,7 @@ def generate_connection_invoice_pdf(
     sh_customer_name = str(get_display(reshape(customer_name)))
 
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
     logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
 
     def _draw_logo(canvas, _doc):
