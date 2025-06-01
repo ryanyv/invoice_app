@@ -21,6 +21,7 @@ import sys
 class InvoiceApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.customer_name_var = tk.StringVar()
         self.action_frame = None
         # --- Moved: Checkbox state and added-value/discount variables ---
         self.include_added_var = tk.BooleanVar(value=False)
@@ -134,7 +135,7 @@ class InvoiceApp(tk.Tk):
         customer_frame = tk.Frame(parent_frame)
         customer_frame.pack(pady=10, fill='x', padx=10)
         tk.Label(customer_frame, text="Customer Name:").pack(side='left')
-        self.customer_entry = tk.Entry(customer_frame)
+        self.customer_entry = tk.Entry(customer_frame, textvariable=self.customer_name_var)
         self.customer_entry.pack(side='left', fill='x', expand=True, padx=5)
         self.customer_entry.bind("<KeyRelease>", lambda e: self.update_subtotal())
         self.customer_entry.bind("<FocusOut>", lambda e: self.update_subtotal())
@@ -479,7 +480,7 @@ class InvoiceApp(tk.Tk):
         customer_frame = tk.Frame(parent_frame)
         customer_frame.pack(pady=10, fill='x', padx=10)
         tk.Label(customer_frame, text="Customer Name:").pack(side='left')
-        self.connection_customer_entry = tk.Entry(customer_frame)
+        self.connection_customer_entry = tk.Entry(customer_frame, textvariable=self.customer_name_var)
         self.connection_customer_entry.pack(side='left', fill='x', expand=True, padx=5)
         # Load default invoice number from persistent counter file
         try:
@@ -672,7 +673,7 @@ class InvoiceApp(tk.Tk):
             if not self.connection_items:
                 messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
                 return
-            customer = self.connection_customer_entry.get().strip()
+            customer = self.customer_name_var.get().strip()
             if not customer:
                 messagebox.showwarning("Missing Customer", "Please enter the customer name.")
                 return
@@ -942,7 +943,7 @@ class InvoiceApp(tk.Tk):
         if not self.standard_items:
             messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
             return
-        customer = self.customer_entry.get().strip()
+        customer = self.customer_name_var.get().strip()
         if not customer:
             messagebox.showwarning("Missing Customer", "Please enter the customer name.")
             return
