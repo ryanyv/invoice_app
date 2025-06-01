@@ -574,6 +574,16 @@ class InvoiceApp(tk.Tk):
         self.connection_tree.bind("<KeyPress-Up>", on_up_pressed, add="+")
         self.connection_tree.bind("<ButtonRelease-1>", on_tree_blank_click, add="+")
 
+        # --- Explanation input for connection tab ---
+        connection_explanation_outer_frame = tk.Frame(parent_frame) # Outer frame for padding
+        connection_explanation_outer_frame.pack(fill='x', padx=10, pady=(5,0)) # pady top 5, bottom 0
+
+        connection_explanation_frame = tk.LabelFrame(connection_explanation_outer_frame, text="Explanation / Notes")
+        connection_explanation_frame.pack(fill='x', expand=True)
+
+        self.connection_explanation_text_widget = tk.Text(connection_explanation_frame, height=3, wrap=tk.WORD, font=("Helvetica", 9))
+        self.connection_explanation_text_widget.pack(fill='x', expand=True, padx=5, pady=5)
+
         # --- Subtotal display ---
         subtotal_frame = tk.Frame(parent_frame)
         subtotal_frame.pack(fill='x', padx=10, pady=5)
@@ -716,6 +726,8 @@ class InvoiceApp(tk.Tk):
                     "unit_price": it["price_per_piece"],
                     "total_price": it["total_price"],
                 })
+            # Read explanation/notes from the text widget
+            explanation = self.connection_explanation_text_widget.get("1.0", tk.END).strip()
             # Use a PDF generator for connections (must be implemented elsewhere)
             try:
                 from create_pdf import generate_connection_invoice_pdf
@@ -725,8 +737,9 @@ class InvoiceApp(tk.Tk):
             pdf_result = None
             try:
                 gen_time = time.time()
+                # Pass explanation_text if the PDF generator supports it
                 pdf_result = generate_connection_invoice_pdf(
-                    customer, invoice_number, pdf_items, output_dir=self.output_dir
+                    customer, invoice_number, pdf_items, output_dir=self.output_dir, explanation_text=explanation
                 )
                 if pdf_result is None:
                     pattern = os.path.join(self.output_dir, f"*{invoice_number}*.pdf")
