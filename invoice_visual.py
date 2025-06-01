@@ -7,7 +7,9 @@ from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount,co
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass
 from create_pdf import (
     generate_pdf, to_persian_digits, generate_pdf_with_added_value, generate_pdf_with_discount,
-    generate_pdf_with_custom_discount, generate_pdf_with_discount_and_added_value, generate_pdf_with_custom_discount_and_added_value,generate_connection_invoice_pdf
+    generate_pdf_with_custom_discount, generate_pdf_with_discount_and_added_value, generate_pdf_with_custom_discount_and_added_value,generate_connection_invoice_pdf,
+    generate_connection_invoice_pdf_with_added_value,generate_connection_invoice_pdf_with_discount,generate_connection_invoice_pdf_with_custom_discount,
+    generate_connection_invoice_pdf_with_discount_and_added_value,generate_connection_invoice_pdf_with_custom_discount_and_added_value
 )
 
 import os
@@ -325,7 +327,7 @@ class InvoiceApp(tk.Tk):
             validatecommand=(self.register(self.validate_custom_discount), '%P')
         )
         self.custom_discount_entry.pack(side='left', padx=5)
-        self.custom_discount_entry.bind("<KeyRelease>", lambda e: self.update_subtotal())
+        self.custom_discount_entry.bind("<KeyRelease>", lambda e: (self.update_subtotal(), self.update_connection_subtotal()))
         tk.Label(
             self.discount_frame,
             textvariable=self.discount_value_var,
@@ -584,8 +586,51 @@ class InvoiceApp(tk.Tk):
         self.connection_explanation_text_widget = tk.Text(connection_explanation_frame, height=3, wrap=tk.WORD, font=("Helvetica", 9))
         self.connection_explanation_text_widget.pack(fill='x', expand=True, padx=5, pady=5)
 
+        # --- Added Value display (hidden until checkbox checked, just like in standard tab) ---
+        self.connection_added_value_var = tk.StringVar(value="0.00")
+        self.connection_added_frame = tk.Frame(parent_frame)
+        tk.Label(
+            self.connection_added_frame,
+            text="Added Value (10%):",
+            font=("Helvetica", 11, "bold")
+        ).pack(side='left')
+        tk.Label(
+            self.connection_added_frame,
+            textvariable=self.connection_added_value_var,
+            font=("Helvetica", 11, "bold"),
+            anchor='e'
+        ).pack(side='right')
+        # Do not pack self.connection_added_frame now; will be controlled by menu option
+
+        # --- Discount display (hidden until checkbox checked, just like in standard tab) ---
+        self.connection_discount_value_var = tk.StringVar(value="0.00")
+        self.connection_discount_frame = tk.Frame(parent_frame)
+        tk.Label(
+            self.connection_discount_frame,
+            text="Discount:",
+            font=("Helvetica", 11, "bold")
+        ).pack(side='left')
+        # Custom discount percent entry (mirrored from standard tab, will be shared later)
+        self.connection_custom_discount_entry = tk.Entry(
+            self.connection_discount_frame,
+            textvariable=self.custom_discount_var,  # Use the SAME custom_discount_var for both tabs for later sync
+            width=5,
+            validate="key",
+            validatecommand=(self.register(self.validate_custom_discount), '%P')
+        )
+        self.connection_custom_discount_entry.pack(side='left', padx=5)
+        self.connection_custom_discount_entry.bind("<KeyRelease>", lambda e: (self.update_subtotal(), self.update_connection_subtotal()))
+        tk.Label(
+            self.connection_discount_frame,
+            textvariable=self.connection_discount_value_var,
+            font=("Helvetica", 11, "bold"),
+            anchor='e'
+        ).pack(side='right')
+        # Do not pack self.connection_discount_frame now; will be controlled by menu option
+
         # --- Subtotal display ---
         subtotal_frame = tk.Frame(parent_frame)
+        self.connection_subtotal_frame = subtotal_frame
         subtotal_frame.pack(fill='x', padx=10, pady=5)
         tk.Label(subtotal_frame, text="Subtotal:", font=("Helvetica", 11, "bold")).pack(side='left')
         self.connection_subtotal_var = tk.StringVar(value="0.00")
@@ -680,6 +725,7 @@ class InvoiceApp(tk.Tk):
             update_remove_button_state()
 
         def generate_connection_invoice():
+            pdf_result = None
             if not self.connection_items:
                 messagebox.showwarning("No Items", "Add at least one item before generating an invoice.")
                 return
@@ -728,19 +774,57 @@ class InvoiceApp(tk.Tk):
                 })
             # Read explanation/notes from the text widget
             explanation = self.connection_explanation_text_widget.get("1.0", tk.END).strip()
-            # Use a PDF generator for connections (must be implemented elsewhere)
-            try:
-                from create_pdf import generate_connection_invoice_pdf
-            except ImportError:
-                messagebox.showerror("PDF Generation", "generate_connection_invoice_pdf not found.")
-                return
-            pdf_result = None
+            # --- Use correct PDF generator based on menu bar state ---
             try:
                 gen_time = time.time()
-                # Pass explanation_text if the PDF generator supports it
-                pdf_result = generate_connection_invoice_pdf(
-                    customer, invoice_number, pdf_items, output_dir=self.output_dir, explanation_text=explanation
-                )
+                pdf_result = None
+                # Choose correct generator based on menu bar state
+                custom = self.custom_discount_var.get().strip()
+                if self.include_discount_var.get():
+                    if custom:
+                        try:
+                            discount_pct = float(custom)
+                        except ValueError:
+                            discount_pct = 0.0
+                        if self.include_added_var.get():
+                            pdf_result = generate_connection_invoice_pdf_with_custom_discount_and_added_value(
+                                customer, invoice_number, pdf_items, discount_pct,
+                                output_dir=self.output_dir,
+                                explanation_text=explanation
+                            )
+                        else:
+                            pdf_result = generate_connection_invoice_pdf_with_custom_discount(
+                                customer, invoice_number, pdf_items, discount_pct,
+                                output_dir=self.output_dir,
+                                explanation_text=explanation
+                            )
+                    else:
+                        if self.include_added_var.get():
+                            pdf_result = generate_connection_invoice_pdf_with_discount_and_added_value(
+                                customer, invoice_number, pdf_items,
+                                output_dir=self.output_dir,
+                                explanation_text=explanation
+                            )
+                        else:
+                            pdf_result = generate_connection_invoice_pdf_with_discount(
+                                customer, invoice_number, pdf_items,
+                                output_dir=self.output_dir,
+                                explanation_text=explanation
+                            )
+                else:
+                    if self.include_added_var.get():
+                        pdf_result = generate_connection_invoice_pdf_with_added_value(
+                            customer, invoice_number, pdf_items,
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
+                        )
+                    else:
+                        pdf_result = generate_connection_invoice_pdf(
+                            customer, invoice_number, pdf_items,
+                            output_dir=self.output_dir,
+                            explanation_text=explanation
+                        )
+                # --- Save/verify PDF as before ---
                 if pdf_result is None:
                     pattern = os.path.join(self.output_dir, f"*{invoice_number}*.pdf")
                     matches = glob.glob(pattern)
@@ -1184,18 +1268,10 @@ class InvoiceApp(tk.Tk):
             self.added_value_var.set("0.00")
 
     def on_toggle_discount(self):
-        if self.include_discount_var.get():
-            # Show discount line above subtotal
-            self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-            # If added value is also enabled, ensure added_frame is shown after discount_frame but before subtotal_frame
-            if self.include_added_var.get():
-                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-        else:
-            # Hide discount line
-            self.discount_frame.pack_forget()
-        # Update displayed values
+        self.update_discount_and_added_bars()
         self.update_subtotal()
-        # Adjust window size to accommodate the new discount line
+        if hasattr(self, "update_connection_subtotal"):
+            self.update_connection_subtotal()
         self.update_idletasks()
         req_w = self.winfo_reqwidth()
         req_h = self.winfo_reqheight()
@@ -1203,27 +1279,90 @@ class InvoiceApp(tk.Tk):
 
 
     def on_toggle_added(self):
-        if self.include_added_var.get():
-            # If discount is enabled, ensure discount_frame is packed before added_frame
-            if self.include_discount_var.get():
-                self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-            else:
-                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-        else:
-            self.added_frame.pack_forget()
-        # If discount is enabled, ensure discount_frame is packed before added_frame and both before subtotal_frame
-        if self.include_discount_var.get():
-            self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-            if self.include_added_var.get():
-                self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
-        # Update displayed values
+        self.update_discount_and_added_bars()
         self.update_subtotal()
-        # Adjust window size to accommodate the new added value line
+        if hasattr(self, "update_connection_subtotal"):
+            self.update_connection_subtotal()
         self.update_idletasks()
         req_w = self.winfo_reqwidth()
         req_h = self.winfo_reqheight()
         self.geometry(f"{req_w}x{req_h}")
+
+    def update_discount_and_added_bars(self):
+        # --- Pipe Tab ---
+        if self.include_discount_var.get():
+            self.discount_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+        else:
+            self.discount_frame.pack_forget()
+        if self.include_added_var.get():
+            self.added_frame.pack(fill='x', padx=10, pady=5, before=self.subtotal_frame)
+        else:
+            self.added_frame.pack_forget()
+        # --- Connection Tab ---
+        if self.include_discount_var.get():
+            self.connection_discount_frame.pack(fill='x', padx=10, pady=5, before=self.connection_subtotal_frame)
+        else:
+            self.connection_discount_frame.pack_forget()
+        if self.include_added_var.get():
+            self.connection_added_frame.pack(fill='x', padx=10, pady=5, before=self.connection_subtotal_frame)
+        else:
+            self.connection_added_frame.pack_forget()
+
+    def update_connection_subtotal(self):
+        subtotal = sum(item["total_price"] for item in self.connection_items)
+        discount_amount = 0.0
+        if self.include_discount_var.get():
+            custom = self.custom_discount_var.get().strip()
+            if custom:
+                try:
+                    pct = float(custom)
+                    discount_amount = subtotal * (pct / 100.0)
+                except ValueError:
+                    discount_amount = 0.0
+            else:
+                # Load tiered discount thresholds (reuse from update_subtotal)
+                import sys, os, csv
+                base_path = getattr(sys, '_MEIPASS', os.path.dirname(__file__))
+                csv_path = os.path.join(base_path, "program files", "discount.csv")
+                thresholds = []
+                try:
+                    with open(csv_path, newline='', encoding='utf-8') as f:
+                        reader = csv.reader(f)
+                        for row in reader:
+                            if not row or len(row) < 2:
+                                continue
+                            try:
+                                thr = float(row[0].strip())
+                                pct = float(row[1].strip())
+                            except ValueError:
+                                continue
+                            thresholds.append((thr, pct))
+                except FileNotFoundError:
+                    thresholds = []
+                thresholds.sort(key=lambda x: x[0])
+                for idx, (thr, pct) in enumerate(thresholds):
+                    if subtotal > thr:
+                        upper = thresholds[idx+1][0] if idx+1 < len(thresholds) else subtotal
+                        seg = min(subtotal, upper) - thr
+                        if seg > 0:
+                            discount_amount += seg * pct / 100
+        subtotal_after_discount = subtotal - discount_amount
+        # Update discount display (integer)
+        if discount_amount:
+            self.connection_discount_value_var.set(f"{int(round(discount_amount)):,}")
+        else:
+            self.connection_discount_value_var.set("0")
+        # Calculate added value (10%)
+        if self.include_added_var.get():
+            added = subtotal_after_discount * 0.10
+        else:
+            added = 0.0
+        total_with_adjustments = subtotal_after_discount + added
+        self.connection_subtotal_var.set(f"{int(total_with_adjustments):,}")
+        if self.include_added_var.get():
+            self.connection_added_value_var.set(f"{int(added):,}")
+        else:
+            self.connection_added_value_var.set("0.00")
 
     def load_series_data(self):
         # Read pipe series SDR <-> PN mapping from CSV
@@ -1553,3 +1692,4 @@ if __name__ == "__main__":
         """Stub for now, will apply theme next."""
         # Theme application will be handled in the next step.
         pass
+
