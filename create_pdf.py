@@ -3,6 +3,9 @@ from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass, calculate_price_per_kg_from_total
 from datetime import datetime
 from reportlab.lib.pagesizes import A4, landscape
+
+# Define PAGE_WIDTH, PAGE_HEIGHT for landscape A4
+PAGE_WIDTH, PAGE_HEIGHT = landscape(A4)
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -91,7 +94,7 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
         if os.path.exists(logo_path):
             # Coordinates origin is at lower‑left; place near top‑left inside page margins
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60  # 60 is the logo height
+            y = PAGE_HEIGHT - _doc.topMargin - 60  # 60 is the logo height
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -219,7 +222,7 @@ def generate_pdf_with_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     # Build flowables
@@ -353,7 +356,7 @@ def generate_pdf_with_discount(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     # Build flowables
@@ -511,7 +514,7 @@ def generate_pdf_with_custom_discount(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -646,7 +649,7 @@ def generate_pdf_with_discount_and_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     # Build flowables
@@ -813,7 +816,7 @@ def generate_pdf_with_custom_discount_and_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -987,7 +990,7 @@ def generate_connection_invoice_pdf(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -1141,7 +1144,7 @@ def generate_connection_invoice_pdf_with_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -1297,7 +1300,7 @@ def generate_connection_invoice_pdf_with_discount(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -1477,7 +1480,7 @@ def generate_connection_invoice_pdf_with_custom_discount(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -1637,7 +1640,7 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
@@ -1828,7 +1831,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = A4[1] - _doc.topMargin - 60
+            y = PAGE_HEIGHT - _doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
