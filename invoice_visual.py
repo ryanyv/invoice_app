@@ -1592,9 +1592,40 @@ class InvoiceApp(tk.Tk):
         pass
 
     def clear_all(self):
-        """Clear all input fields and items."""
-        # Clear customer entry (preserve invoice number)
+        """Clear all input fields and items in both tabs."""
+        # --- Standard Invoice tab ---
         self.customer_entry.delete(0, tk.END)
+        # Do NOT clear invoice number, so users keep the next-increment
+        for key, widget in self.standard_entries.items():
+            if isinstance(widget, ttk.Combobox):
+                widget.set('')
+            else:
+                widget.delete(0, tk.END)
+        for item in self.standard_tree.get_children():
+            self.standard_tree.delete(item)
+        self.standard_items.clear()
+        self.explanation_text_widget.delete("1.0", tk.END)
+        self.subtotal_var.set("0.00")
+        self.discount_value_var.set("0.00")
+        self.added_value_var.set("0.00")
+        # --- Connection Pipes tab ---
+        self.connection_customer_entry.delete(0, tk.END)
+        # Do NOT clear invoice number, so users keep the next-increment
+        for key, widget in self.connection_entries.items():
+            if isinstance(widget, ttk.Combobox):
+                widget.set('')
+            else:
+                widget.config(state="normal")
+                widget.delete(0, tk.END)
+                if key in ("price_per_piece", "total_price"):
+                    widget.config(state="readonly")
+        for item in self.connection_tree.get_children():
+            self.connection_tree.delete(item)
+        self.connection_items.clear()
+        self.connection_explanation_text_widget.delete("1.0", tk.END)
+        self.connection_subtotal_var.set("0.00")
+        self.connection_discount_value_var.set("0.00")
+        self.connection_added_value_var.set("0.00")
         # Clear item detail entries
         for key, widget in self.standard_entries.items(): # Assumes standard_entries
             if isinstance(widget, ttk.Combobox):
