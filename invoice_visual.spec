@@ -10,7 +10,7 @@ a = Analysis(
     ['invoice_visual.py'],
     pathex=[],
     binaries=[],
-    datas=[('program files/pipe_series_sdr.csv', 'program files'), ('program files/DIN_pivot.csv', 'program files'), ('program files/logo.png', 'program files'), ('program files/DejaVuSans.ttf', 'program files'), ('program files/PN_TO_SDR.CSV', 'program files'), ('program files/discount.csv', 'program files'), ('program files/invoice_counter.json', '.')],
+    datas=[('program files/pipe_series_sdr.csv', 'program files'), ('program files/DIN_pivot.csv', 'program files'), ('program files/logo.png', 'program files'), ('program files/DejaVuSans.ttf', 'program files'), ('program files/PN_TO_SDR.CSV', 'program files'), ('program files/discount.csv', 'program files'), ('program files/invoice_counter.json', '.'), ('program files/connections.csv', 'program files'),],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
