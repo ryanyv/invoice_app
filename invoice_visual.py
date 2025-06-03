@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox, filedialog
 import datetime
 import shutil
 
-from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount,connection_type,products_for_connection_type,sizes_for_type_and_product,row_for_type_product_size,read_all_connections,get_price_per_piece
+from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount,connection_type,products_for_connection_type,sizes_for_type_and_product,row_for_type_product_size,read_all_connections,get_price_per_piece,pressures_for_type_and_product
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass
 from create_pdf import (
     generate_pdf, to_persian_digits, generate_pdf_with_added_value, generate_pdf_with_discount,
@@ -387,7 +387,20 @@ class InvoiceApp(tk.Tk):
         def on_product_selected(event=None):
             t = self.connection_entries["type"].get()
             p = self.connection_entries["product"].get()
-            sizes = sizes_for_type_and_product(t, p) if t and p else []
+            # Update PN combobox based on type and product
+            pressures = pressures_for_type_and_product(t, p) if t and p else []
+            self.connection_entries["pn"]["values"] = pressures
+            self.connection_entries["pn"].set('')
+            self.connection_entries["size"]["values"] = []
+            self.connection_entries["size"].set('')
+            update_price_and_total()
+            update_add_button_state()
+
+        def on_pn_selected(event=None):
+            t = self.connection_entries["type"].get()
+            p = self.connection_entries["product"].get()
+            pn = self.connection_entries["pn"].get()
+            sizes = sizes_for_type_and_product(t, p, pn) if t and p and pn else []
             self.connection_entries["size"]["values"] = sizes
             self.connection_entries["size"].set('')
             update_price_and_total()
@@ -404,11 +417,12 @@ class InvoiceApp(tk.Tk):
         def update_price_and_total():
             t = self.connection_entries["type"].get()
             p = self.connection_entries["product"].get()
+            pn = self.connection_entries["pn"].get()
             s = self.connection_entries["size"].get()
             price = ""
-            if t and p and s:
+            if t and p and pn and s:
                 try:
-                    val = get_price_per_piece(t, p, s)
+                    val = get_price_per_piece(t, p, pn, s)
                     if val is not None:
                         price = str(int(round(val)))
                     else:
@@ -440,11 +454,12 @@ class InvoiceApp(tk.Tk):
         def update_add_button_state(event=None):
             t = self.connection_entries["type"].get().strip()
             p = self.connection_entries["product"].get().strip()
+            pn = self.connection_entries["pn"].get().strip()
             s = self.connection_entries["size"].get().strip()
             qty = self.connection_entries["quantity"].get().strip()
             price = self.connection_entries["price_per_piece"].get().strip()
             total = self.connection_entries["total_price"].get().strip()
-            valid = bool(t and p and s and qty and price and total)
+            valid = bool(t and p and pn and s and qty and price and total)
             try:
                 if float(qty) <= 0:
                     valid = False
@@ -504,7 +519,7 @@ class InvoiceApp(tk.Tk):
         item_frame.pack(fill='x', padx=10, pady=5)
         for col in (1, 3, 5, 7):
             item_frame.grid_columnconfigure(col, weight=1)
-        # Entries: "Type", "Product", "Size", "Quantity", "Price per Piece", "Total Price"
+        # Entries: "Type", "Product", "PN", "Size", "Quantity", "Price per Piece", "Total Price"
         self.connection_entries = {}
         # Type
         tk.Label(item_frame, text="Type:").grid(row=0, column=0, sticky='e', padx=2, pady=2)
@@ -521,17 +536,24 @@ class InvoiceApp(tk.Tk):
         self.connection_entries["product"] = product_cb
         # Add Enter key binding for Product combobox
         product_cb.bind('<Return>', lambda e: self.add_connection_item_action())
+        # PN (Pressure)
+        tk.Label(item_frame, text="PN:").grid(row=0, column=4, sticky='e', padx=2, pady=2)
+        pn_cb = ttk.Combobox(item_frame, values=[], state="readonly")
+        pn_cb.grid(row=0, column=5, sticky='w', padx=2, pady=2)
+        self.connection_entries["pn"] = pn_cb
+        # Add Enter key binding for PN combobox
+        pn_cb.bind('<Return>', lambda e: self.add_connection_item_action())
         # Size
-        tk.Label(item_frame, text="Size:").grid(row=0, column=4, sticky='e', padx=2, pady=2)
+        tk.Label(item_frame, text="Size:").grid(row=0, column=6, sticky='e', padx=2, pady=2)
         size_cb = ttk.Combobox(item_frame, values=[], state="readonly")
-        size_cb.grid(row=0, column=5, sticky='w', padx=2, pady=2)
+        size_cb.grid(row=0, column=7, sticky='w', padx=2, pady=2)
         self.connection_entries["size"] = size_cb
         # Add Enter key binding for Size combobox
         size_cb.bind('<Return>', lambda e: self.add_connection_item_action())
         # Quantity
-        tk.Label(item_frame, text="Quantity:").grid(row=0, column=6, sticky='e', padx=2, pady=2)
+        tk.Label(item_frame, text="Quantity:").grid(row=0, column=8, sticky='e', padx=2, pady=2)
         quantity_entry = tk.Entry(item_frame, width=10)
-        quantity_entry.grid(row=0, column=7, sticky='w', padx=2, pady=2)
+        quantity_entry.grid(row=0, column=9, sticky='w', padx=2, pady=2)
         self.connection_entries["quantity"] = quantity_entry
         # Add Enter key binding for Quantity entry
         quantity_entry.bind('<Return>', lambda e: self.add_connection_item_action())
@@ -549,6 +571,7 @@ class InvoiceApp(tk.Tk):
         # Bindings for dynamic updates
         type_cb.bind("<<ComboboxSelected>>", on_type_selected)
         product_cb.bind("<<ComboboxSelected>>", on_product_selected)
+        pn_cb.bind("<<ComboboxSelected>>", on_pn_selected)
         size_cb.bind("<<ComboboxSelected>>", on_size_selected)
         quantity_entry.bind("<KeyRelease>", on_quantity_changed)
         quantity_entry.bind("<FocusOut>", on_quantity_changed)
@@ -558,14 +581,14 @@ class InvoiceApp(tk.Tk):
             item_frame, text="Add Item", state="disabled", font=("Helvetica", 10, "bold"),
             command=self.add_connection_item_action
         )
-        self.connection_add_btn.grid(row=1, column=7, padx=2, pady=2, sticky='w')
+        self.connection_add_btn.grid(row=1, column=9, padx=2, pady=2, sticky='w')
 
         # --- Treeview for connection items ---
-        columns = ("no", "type", "product", "size", "quantity", "price_per_piece", "total_price")
+        columns = ("no", "type", "product", "pn", "size", "quantity", "price_per_piece", "total_price")
         tree_frame = tk.Frame(parent_frame)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
         self.connection_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=8)
-        headings = ["No.", "Type", "Product", "Size", "Quantity", "Price per Piece", "Total Price"]
+        headings = ["No.", "Type", "Product", "PN", "Size", "Quantity", "Price per Piece", "Total Price"]
         for col, hd in zip(columns, headings):
             if col == "no":
                 self.connection_tree.column(col, width=50, minwidth=40, stretch=False, anchor='center')
@@ -892,19 +915,20 @@ class InvoiceApp(tk.Tk):
         try:
             t = self.connection_entries["type"].get().strip()
             p = self.connection_entries["product"].get().strip()
+            pn = self.connection_entries["pn"].get().strip()
             s = self.connection_entries["size"].get().strip()
             qty_str = self.connection_entries["quantity"].get().strip()
             price_str = self.connection_entries["price_per_piece"].get().strip()
             total_str = self.connection_entries["total_price"].get().strip()
-            if not (t and p and s and qty_str and price_str and total_str):
+            if not (t and p and pn and s and qty_str and price_str and total_str):
                 raise ValueError("Fill all fields for the connection item.")
             qty = float(qty_str)
             price = float(price_str)
             total = float(total_str)
-            item = {"type": t, "product": p, "size": s, "quantity": qty, "price_per_piece": price, "total_price": total}
+            item = {"type": t, "product": p, "pn": pn, "size": s, "quantity": qty, "price_per_piece": price, "total_price": total}
             self.connection_items.append(item)
             item_no = len(self.connection_items)
-            self.connection_tree.insert("", "end", values=(item_no, t, p, s, qty, f"{int(price):,}", f"{int(total):,}" ))
+            self.connection_tree.insert("", "end", values=(item_no, t, p, pn, s, qty, f"{int(price):,}", f"{int(total):,}" ))
             update_subtotal_local()
             # clear_connection_entries_local()  # Removed per instructions
             # self.connection_add_btn state will be updated by its own event bindings

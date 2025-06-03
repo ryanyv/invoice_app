@@ -331,19 +331,69 @@ def products_for_connection_type(type_value, csv_filename="connections.csv", sub
     return sorted(products)
 
 
-# New function: sizes_for_type_and_product
-def sizes_for_type_and_product(type_value, product_value, csv_filename="connections.csv", subfolder="program files"):
+# New function: pressures_for_type_and_product
+def pressures_for_type_and_product(type_value, product_value, csv_filename="connections.csv", subfolder="program files"):
     """
-    Returns a sorted list of unique sizes ('اندازه (mm)') for a given type and product.
+    Returns a sorted list of unique 'فشار قابل تحمل' values for a given type and product.
 
     Args:
         type_value (str): The value for the '\ufeffنوع' column.
         product_value (str): The value for the 'محصول' column.
+        csv_filename (str): CSV file name.
+        subfolder (str): Folder for the CSV.
+
+    Returns:
+        list: Sorted list of unique 'فشار قابل تحمل' values.
+
+    Raises:
+        FileNotFoundError: If the CSV is missing.
+        ValueError: If columns are not found.
+    """
+    base_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(base_dir, subfolder, csv_filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Connections file not found: {csv_path}")
+
+    pressures = set()
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if (
+            not reader.fieldnames or
+            '\ufeffنوع' not in reader.fieldnames or
+            'محصول' not in reader.fieldnames or
+            'فشار قابل تحمل' not in reader.fieldnames
+        ):
+            raise ValueError(f"Expected columns not found in CSV: {csv_path}")
+        for row in reader:
+            if (
+                row.get('\ufeffنوع', '').strip() == type_value.strip() and
+                row.get('محصول', '').strip() == product_value.strip()
+            ):
+                pressure = row.get('فشار قابل تحمل')
+                if pressure:
+                    pressures.add(pressure.strip())
+    # Optionally, try to sort numerically
+    try:
+        return sorted(pressures, key=lambda x: float(x.replace(',', '').replace(' ', '')))
+    except Exception:
+        return sorted(pressures)
+
+
+
+# New function: sizes_for_type_and_product
+def sizes_for_type_and_product(type_value, product_value, pressure_value, csv_filename="connections.csv", subfolder="program files"):
+    """
+    Returns a sorted list of unique sizes ('اندازه (mm)') for a given type, product, and pressure.
+
+    Args:
+        type_value (str): The value for the '\ufeffنوع' column.
+        product_value (str): The value for the 'محصول' column.
+        pressure_value (str): The value for the 'فشار قابل تحمل' column.
         csv_filename (str): The CSV file name.
         subfolder (str): The folder for the CSV file.
 
     Returns:
-        list: Sorted list of unique sizes for the type and product.
+        list: Sorted list of unique sizes for the type, product, and pressure.
 
     Raises:
         FileNotFoundError: If the CSV is missing.
@@ -361,13 +411,15 @@ def sizes_for_type_and_product(type_value, product_value, csv_filename="connecti
             not reader.fieldnames or
             '\ufeffنوع' not in reader.fieldnames or
             'محصول' not in reader.fieldnames or
+            'فشار قابل تحمل' not in reader.fieldnames or
             'اندازه (mm)' not in reader.fieldnames
         ):
             raise ValueError(f"Expected columns not found in CSV: {csv_path}")
         for row in reader:
             if (
                 row.get('\ufeffنوع', '').strip() == type_value.strip() and
-                row.get('محصول', '').strip() == product_value.strip()
+                row.get('محصول', '').strip() == product_value.strip() and
+                row.get('فشار قابل تحمل', '').strip() == pressure_value.strip()
             ):
                 size = row.get('اندازه (mm)')
                 if size:
@@ -425,13 +477,14 @@ def row_for_type_product_size(type_value, product_value, size_value, csv_filenam
 
 
 # New function: get_price_per_piece
-def get_price_per_piece(type_value, product_value, size_value, csv_filename="connections.csv", subfolder="program files"):
+def get_price_per_piece(type_value, product_value, pressure_value, size_value, csv_filename="connections.csv", subfolder="program files"):
     """
-    Returns the price per piece ('قیمت واحد (ریال)') from the row matching the given type, product, and size.
+    Returns the price per piece ('قیمت واحد (ریال)') from the row matching the given type, product, pressure, and size.
 
     Args:
         type_value (str): The value for the '\ufeffنوع' column.
         product_value (str): The value for the 'محصول' column.
+        pressure_value (str): The value for the 'فشار قابل تحمل' column.
         size_value (str): The value for the 'اندازه (mm)' column.
         csv_filename (str): The CSV file name.
         subfolder (str): The folder for the CSV file.
@@ -454,6 +507,7 @@ def get_price_per_piece(type_value, product_value, size_value, csv_filename="con
             not reader.fieldnames or
             '\ufeffنوع' not in reader.fieldnames or
             'محصول' not in reader.fieldnames or
+            'فشار قابل تحمل' not in reader.fieldnames or
             'اندازه (mm)' not in reader.fieldnames or
             'قیمت واحد (ریال)' not in reader.fieldnames
         ):
@@ -462,20 +516,21 @@ def get_price_per_piece(type_value, product_value, size_value, csv_filename="con
             if (
                 row.get('\ufeffنوع', '').strip() == type_value.strip() and
                 row.get('محصول', '').strip() == product_value.strip() and
+                row.get('فشار قابل تحمل', '').strip() == pressure_value.strip() and
                 row.get('اندازه (mm)', '').strip() == size_value.strip()
             ):
                 price_val = row.get('قیمت واحد (ریال)')
                 if price_val is None:
-                    raise ValueError(f"'قیمت واحد (ریال)' value missing in row for {type_value}, {product_value}, {size_value}")
+                    raise ValueError(f"'قیمت واحد (ریال)' value missing in row for {type_value}, {product_value}, {pressure_value}, {size_value}")
                 price_val = price_val.strip()
                 if not price_val:
-                    raise ValueError(f"'قیمت واحد (ریال)' is empty for {type_value}, {product_value}, {size_value}")
+                    raise ValueError(f"'قیمت واحد (ریال)' is empty for {type_value}, {product_value}, {pressure_value}, {size_value}")
                 try:
                     # Remove any thousands separators or spaces
                     cleaned = price_val.replace(",", "").replace(" ", "")
                     return float(cleaned)
                 except Exception:
-                    raise ValueError(f"Cannot convert price '{price_val}' to float for {type_value}, {product_value}, {size_value}")
+                    raise ValueError(f"Cannot convert price '{price_val}' to float for {type_value}, {product_value}, {pressure_value}, {size_value}")
         # Row not found
         return None
 
