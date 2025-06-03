@@ -390,9 +390,13 @@ class InvoiceApp(tk.Tk):
             # Update PN combobox based on type and product
             pressures = pressures_for_type_and_product(t, p) if t and p else []
             self.connection_entries["pn"]["values"] = pressures
-            self.connection_entries["pn"].set('')
-            self.connection_entries["size"]["values"] = []
-            self.connection_entries["size"].set('')
+            if len(pressures) == 1:
+                self.connection_entries["pn"].set(pressures[0])
+                on_pn_selected()
+            else:
+                self.connection_entries["pn"].set('')
+                self.connection_entries["size"]["values"] = []
+                self.connection_entries["size"].set('')
             update_price_and_total()
             update_add_button_state()
 
@@ -800,6 +804,7 @@ class InvoiceApp(tk.Tk):
                 pdf_items.append({
                     "type": it["type"],
                     "product": it["product"],
+                    "pn": it["pn"],  # Include PN for PDF columns
                     "size": it["size"],
                     "quantity": it["quantity"],
                     "unit_price": it["price_per_piece"],

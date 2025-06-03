@@ -1016,8 +1016,8 @@ def generate_connection_invoice_pdf(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    # Table headers: نوع اتصال | محصول | سایز | تعداد | قیمت واحد | قیمت کل (RTL order, so reverse for display)
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    # Table headers: نوع اتصال | محصول | فشار قابل تحمل | سایز | تعداد | قیمت واحد | قیمت کل (RTL order, so reverse for display)
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1027,6 +1027,7 @@ def generate_connection_invoice_pdf(
         # All values as string, prices as Persian digits with thousands separator
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        pn_val = str(get_display(reshape(str(itm.get("pn", "")))))
         size_val   = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
@@ -1035,10 +1036,11 @@ def generate_connection_invoice_pdf(
         total_price_all += total_price
         unit_price_str = str(get_display(reshape(f"{int(unit_price):,}")))
         total_price_str = str(get_display(reshape(f"{int(total_price):,}")))
-        # Order: type, product, size, quantity, unit_price, total_price
+        # Order: type, product, pn, size, quantity, unit_price, total_price
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1046,10 +1048,10 @@ def generate_connection_invoice_pdf(
         ]
         data.append(list(reversed(row)))
 
-    # Add total row (align with new columns: [نوع اتصال, محصول, سایز, تعداد, قیمت واحد, قیمت کل])
+    # Add total row (align with new columns: [نوع اتصال, محصول, فشار قابل تحمل, سایز, تعداد, قیمت واحد, قیمت کل])
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(total_price_all):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     # --- Dynamically calculate column widths for all columns ---
@@ -1169,7 +1171,7 @@ def generate_connection_invoice_pdf_with_added_value(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1178,6 +1180,7 @@ def generate_connection_invoice_pdf_with_added_value(
     for itm in items:
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        pn_val = str(get_display(reshape(str(itm.get("pn", "")))))
         size_val   = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
@@ -1189,6 +1192,7 @@ def generate_connection_invoice_pdf_with_added_value(
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1200,14 +1204,14 @@ def generate_connection_invoice_pdf_with_added_value(
     added_value = total_price_all * 0.10
     sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده")))
     sh_added_value = str(get_display(reshape(f"{int(added_value):,}")))
-    added_row = ["", "", "", "", sh_added_label, sh_added_value]
+    added_row = ["", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total including added value
     final_total = total_price_all + added_value
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1325,7 +1329,7 @@ def generate_connection_invoice_pdf_with_discount(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1334,6 +1338,7 @@ def generate_connection_invoice_pdf_with_discount(
     for itm in items:
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        pn_val = str(get_display(reshape(str(itm.get("pn", "")))))
         size_val   = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
@@ -1345,6 +1350,7 @@ def generate_connection_invoice_pdf_with_discount(
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1380,14 +1386,14 @@ def generate_connection_invoice_pdf_with_discount(
 
     sh_discount_label = str(get_display(reshape("تخفیف")))
     sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
-    discount_row = ["", "", "", "", sh_discount_label, sh_discount_value]
+    discount_row = ["", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Final total after discount
     final_total = total_price_all - discount_amount
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1505,7 +1511,8 @@ def generate_connection_invoice_pdf_with_custom_discount(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    # Updated headers: add "فشار قابل تحمل"
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1514,6 +1521,7 @@ def generate_connection_invoice_pdf_with_custom_discount(
     for itm in items:
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        pn_val = str(get_display(reshape(str(itm.get("pn", "")))))
         size_val   = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
@@ -1522,9 +1530,11 @@ def generate_connection_invoice_pdf_with_custom_discount(
         total_price_all += total_price
         unit_price_str = str(get_display(reshape(f"{int(unit_price):,}")))
         total_price_str = str(get_display(reshape(f"{int(total_price):,}")))
+        # Order: type, product, pn, size, quantity, unit_price, total_price
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1540,14 +1550,14 @@ def generate_connection_invoice_pdf_with_custom_discount(
 
     sh_discount_label = str(get_display(reshape("تخفیف")))
     sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
-    discount_row = ["", "", "", "", sh_discount_label, sh_discount_value]
+    discount_row = ["", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Final total after discount
     final_total = total_price_all - discount_amount
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1665,7 +1675,8 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    # Updated headers: add "فشار قابل تحمل"
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
@@ -1674,6 +1685,7 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
     for itm in items:
         type_val   = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
+        pn_val = str(get_display(reshape(str(itm.get("pn", "")))))
         size_val   = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
@@ -1682,9 +1694,11 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
         total_price_all += total_price
         unit_price_str = str(get_display(reshape(f"{int(unit_price):,}")))
         total_price_str = str(get_display(reshape(f"{int(total_price):,}")))
+        # Order: type, product, pn, size, quantity, unit_price, total_price
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1720,7 +1734,7 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
 
     sh_discount_label = str(get_display(reshape("تخفیف")))
     sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
-    discount_row = ["", "", "", "", sh_discount_label, sh_discount_value]
+    discount_row = ["", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Net after discount
@@ -1730,14 +1744,14 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
     added_value = net_after_discount * 0.10
     sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده")))
     sh_added_value = str(get_display(reshape(f"{int(added_value):,}")))
-    added_row = ["", "", "", "", sh_added_label, sh_added_value]
+    added_row = ["", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total including added value
     final_total = net_after_discount + added_value
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1801,7 +1815,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     """
     Generates a PDF invoice for connection items applying a custom discount (percent if <=100, absolute if >100)
     and then adds 10% added value tax on the net amount.
-    Columns: نوع اتصال | محصول | سایز | تعداد | قیمت واحد | قیمت کل
+    Columns: نوع اتصال | محصول | فشار قابل تحمل | سایز | تعداد | قیمت واحد | قیمت کل
     """
     if output_dir is None:
         output_dir = os.path.join(os.path.dirname(__file__), "خروجی")
@@ -1826,18 +1840,18 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
 
     pdf_file = os.path.join(output_dir, f"{invoice_number}.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
-    logo_path = os.path.join(DEPENDENCIES_DIR, "logo.png")
+    logo_path = os.path.join(os.path.dirname(__file__), "program files", "logo.png")
 
     def _draw_logo(canvas, _doc):
         if os.path.exists(logo_path):
             x = _doc.leftMargin
-            y = PAGE_HEIGHT - _doc.topMargin - 60
+            y = doc.pagesize[1] - doc.topMargin - 60
             canvas.drawImage(logo_path, x, y, width=90, height=60, preserveAspectRatio=True, mask='auto')
 
     elements = []
     title_style = ParagraphStyle(
         name="CompanyTitle",
-        fontName=DEFAULT_FONT,
+        fontName="Persian",
         fontSize=18,
         alignment=TA_CENTER,
         leading=22
@@ -1850,22 +1864,24 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONT', (0, 0), (-1, -1), DEFAULT_FONT, 12),
+        ('FONT', (0, 0), (-1, -1), "Persian", 12),
         ('BOTTOMPADDING', (0,0), (-1,-1), 5),
     ]))
     elements.append(table)
     elements.append(Spacer(1, 20))
 
-    headers_text = ["نوع اتصال", "محصول", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
+    # Updated headers: add "فشار قابل تحمل"
+    headers_text = ["نوع اتصال", "محصول", "فشار قابل تحمل", "سایز", "تعداد", "قیمت واحد", "قیمت کل"]
     headers = [str(get_display(reshape(h))) for h in headers_text]
     headers = list(reversed(headers))
     data = [headers]
 
     total_price_all = 0.0
     for itm in items:
-        type_val   = str(get_display(reshape(str(itm.get("type", "")))))
+        type_val    = str(get_display(reshape(str(itm.get("type", "")))))
         product_val = str(get_display(reshape(str(itm.get("product", "")))))
-        size_val   = str(get_display(reshape(str(itm.get("size", "")))))
+        pn_val      = str(get_display(reshape(str(itm.get("pn", "")))))
+        size_val    = str(get_display(reshape(str(itm.get("size", "")))))
         quantity = itm.get("quantity", 1)
         quantity_val = str(get_display(reshape(str(int(quantity)))))
         unit_price = itm.get("unit_price", 0)
@@ -1876,6 +1892,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
         row = [
             type_val,
             product_val,
+            pn_val,
             size_val,
             quantity_val,
             unit_price_str,
@@ -1891,7 +1908,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
 
     sh_discount_label = str(get_display(reshape("تخفیف")))
     sh_discount_value = str(get_display(reshape(f"{int(discount_amount):,}")))
-    discount_row = ["", "", "", "", sh_discount_label, sh_discount_value]
+    discount_row = ["", "", "", "", "", sh_discount_label, sh_discount_value]
     data.append(list(reversed(discount_row)))
 
     # Net after discount
@@ -1901,18 +1918,18 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     added_value = net_after_discount * 0.10
     sh_added_label = str(get_display(reshape("مالیات بر ارزش افزوده")))
     sh_added_value = str(get_display(reshape(f"{int(added_value):,}")))
-    added_row = ["", "", "", "", sh_added_label, sh_added_value]
+    added_row = ["", "", "", "", "", sh_added_label, sh_added_value]
     data.append(list(reversed(added_row)))
 
     # Final total including added value
     final_total = net_after_discount + added_value
     sh_total_label = str(get_display(reshape("جمع کل")))
     sh_total_price = str(get_display(reshape(f"{int(final_total):,}")))
-    total_row = ["", "", "", "", sh_total_label, sh_total_price]
+    total_row = ["", "", "", "", "", sh_total_label, sh_total_price]
     data.append(list(reversed(total_row)))
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
-    col_font = DEFAULT_FONT
+    col_font = "Persian"
     col_font_size = 10
     num_cols = len(data[0])
     col_widths = []
@@ -1929,7 +1946,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('FONT', (0, 0), (-1, -1), DEFAULT_FONT, 10),
+        ('FONT', (0, 0), (-1, -1), "Persian", 10),
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ('BACKGROUND', (0, -3), (1, -3), colors.lightgrey),
         ('BACKGROUND', (0, -2), (1, -2), colors.lightgrey),
@@ -1944,11 +1961,11 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
         sh_explanation_label = str(get_display(reshape("توضیحات:")))
         sh_explanation = str(get_display(reshape(explanation_text)))
         explanation_label_style = ParagraphStyle(
-            name="ExplanationLabel", fontName=DEFAULT_FONT, fontSize=10,
+            name="ExplanationLabel", fontName="Persian", fontSize=10,
             alignment=TA_RIGHT, leading=14, spaceBefore=6
         )
         explanation_text_style = ParagraphStyle(
-            name="ExplanationText", fontName=DEFAULT_FONT, fontSize=10,
+            name="ExplanationText", fontName="Persian", fontSize=10,
             alignment=TA_RIGHT, leading=14, rightIndent=0
         )
         elements.append(Paragraph(sh_explanation_label, explanation_label_style))
@@ -1958,4 +1975,3 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF with custom discount and added value saved to: {pdf_file}")
     return pdf_file
-
