@@ -38,9 +38,12 @@ COMPANY_NAME = "شرکت پلی غرب"
 
 # Helper for invoice numbering
 def _get_next_invoice_number():
-    """
-    Reads the invoice counter file, increments the counter, writes it back, and returns
-    a zero-padded invoice number string.
+    """Return the next invoice number as an unpadded string.
+
+    The function reads ``invoice_counter.json`` from the ``program files``
+    directory, increments the stored ``counter`` value and writes it back.
+    The resulting invoice number is returned directly without any zero
+    padding.
     """
     if os.path.exists(INVOICE_COUNTER_FILE):
         try:
