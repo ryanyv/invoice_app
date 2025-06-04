@@ -1753,8 +1753,4 @@ class InvoiceApp(tk.Tk):
 if __name__ == "__main__":
     app = InvoiceApp()
     app.mainloop()
-    def on_toggle_dark_mode(self):
-        """Stub for now, will apply theme next."""
-        # Theme application will be handled in the next step.
-        pass
 
