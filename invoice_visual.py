@@ -31,8 +31,12 @@ class InvoiceApp(tk.Tk):
         self.include_discount_var = tk.BooleanVar(value=False)
         self.discount_value_var = tk.StringVar(value="0.00")
         self.custom_discount_var = tk.StringVar(value="")
-        # --- Dark mode variable ---
-        self.dark_mode_var = tk.BooleanVar(value=False)
+
+        # --- Appearance management ---
+        self.style = ttk.Style()
+        self.default_theme = self.style.theme_use()
+        self.system_bg = self.cget("background")
+        self.appearance_var = tk.StringVar(value="system")
         # --- Begin expanded menu bar setup ---
         menubar = tk.Menu(self)
         # --- File Menu ---
@@ -65,6 +69,28 @@ class InvoiceApp(tk.Tk):
             command=self.on_toggle_discount
         )
         menubar.add_cascade(label="Options", menu=options_menu)
+
+        # --- Appearance Menu ---
+        appearance_menu = tk.Menu(menubar, tearoff=0)
+        appearance_menu.add_radiobutton(
+            label="System",
+            variable=self.appearance_var,
+            value="system",
+            command=self.apply_appearance
+        )
+        appearance_menu.add_radiobutton(
+            label="Light",
+            variable=self.appearance_var,
+            value="light",
+            command=self.apply_appearance
+        )
+        appearance_menu.add_radiobutton(
+            label="Dark",
+            variable=self.appearance_var,
+            value="dark",
+            command=self.apply_appearance
+        )
+        menubar.add_cascade(label="Appearance", menu=appearance_menu)
         # --- Help Menu ---
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="About", command=lambda: messagebox.showinfo("About", "PolyGharb Invoice Generator\nv1.0"))
@@ -85,6 +111,7 @@ class InvoiceApp(tk.Tk):
         self.notebook.pack(expand=True, fill='both', padx=5, pady=5)
 
         self.load_config()
+        self.apply_appearance()
         # defer sizing until after widgets are created
         self.standard_items = [] # Renamed from self.items
         
@@ -103,6 +130,7 @@ class InvoiceApp(tk.Tk):
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.output_dir = data.get("output_dir", os.path.join(os.path.dirname(__file__), "خروجی"))
+                    self.appearance_var.set(data.get("appearance", "system"))
             except Exception:
                 self.output_dir = os.path.join(os.path.dirname(__file__), "خروجی")
         else:
@@ -110,6 +138,16 @@ class InvoiceApp(tk.Tk):
         os.makedirs(self.output_dir, exist_ok=True)
         # Persistent counter file for invoice numbers
         self.counter_file = os.path.join(os.path.expanduser("~"), ".invoice_app_counter.json")
+
+    def save_config(self):
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "output_dir": self.output_dir,
+                    "appearance": self.appearance_var.get(),
+                }, f)
+        except Exception as e:
+            messagebox.showerror("Error Saving Config", f"Couldn't save configuration:\n{e}")
 
     def validate_numeric(self, P):
         if P == "":
@@ -237,18 +275,6 @@ class InvoiceApp(tk.Tk):
 
         # Add dark mode toggle to options menu
         # Find the menubar and options_menu again (they are local in __init__, so we must reconstruct here)
-        menubar = self.nametowidget(self.winfo_toplevel().cget("menu"))
-        options_menu = None
-        for ix in range(menubar.index("end")+1):
-            if menubar.type(ix) == "cascade" and menubar.entrycget(ix, "label") == "Options":
-                options_menu = menubar.nametowidget(menubar.entrycget(ix, "menu"))
-                break
-        if options_menu is not None:
-            options_menu.add_checkbutton(
-                label="Dark Mode",
-                variable=self.dark_mode_var,
-                command=self.on_toggle_dark_mode
-            )
 
         # Treeview to list added items, with item number column
         columns = ("no", "grade", "pn", "sdr", "diameter", "length", "weight_per_m", "total_mass", "price_per_kg", "total_price")
@@ -1235,13 +1261,11 @@ class InvoiceApp(tk.Tk):
         if new_dir:
             self.output_dir = new_dir
             os.makedirs(self.output_dir, exist_ok=True)
-            try:
-                with open(self.config_file, "w", encoding="utf-8") as f:
-                    json.dump({"output_dir": self.output_dir}, f)
-            except Exception as e:
-                messagebox.showerror("Error Saving Config", f"Couldn't save configuration:\n{e}")
-            messagebox.showinfo("Output Directory Changed",
-                                f"Output directory set to: {self.output_dir}")
+            self.save_config()
+            messagebox.showinfo(
+                "Output Directory Changed",
+                f"Output directory set to: {self.output_dir}"
+            )
 
     def update_subtotal(self):
         subtotal = sum(item["total_price"] for item in self.standard_items) # Assumes standard_items
@@ -1682,9 +1706,48 @@ class InvoiceApp(tk.Tk):
         for idx, iid in enumerate(self.standard_tree.get_children(), start=1): # Assumes standard_tree
             self.standard_tree.set(iid, "no", idx)
 
-    def on_toggle_dark_mode(self):
-        # Theme switching will be implemented here.
-        pass
+    def apply_appearance(self):
+        mode = self.appearance_var.get()
+        if mode == "system":
+            self.style.theme_use(self.default_theme)
+            self.tk_setPalette(background=self.system_bg, foreground="black")
+        elif mode == "light":
+            if "light" not in self.style.theme_names():
+                self._create_light_theme()
+            self.style.theme_use("light")
+            self.tk_setPalette(background="#f0f0f0", foreground="black")
+        else:  # dark
+            if "dark" not in self.style.theme_names():
+                self._create_dark_theme()
+            self.style.theme_use("dark")
+            self.tk_setPalette(background="#2e2e2e", foreground="white", activeBackground="#404040", activeForeground="white")
+        self.save_config()
+
+    def _create_light_theme(self):
+        self.style.theme_create(
+            "light",
+            parent="clam",
+            settings={
+                ".": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
+                "TFrame": {"configure": {"background": "#f0f0f0"}},
+                "TLabel": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
+                "TCheckbutton": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
+                "Treeview": {"configure": {"background": "#ffffff", "fieldbackground": "#ffffff", "foreground": "#000000"}},
+            },
+        )
+
+    def _create_dark_theme(self):
+        self.style.theme_create(
+            "dark",
+            parent="clam",
+            settings={
+                ".": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
+                "TFrame": {"configure": {"background": "#2e2e2e"}},
+                "TLabel": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
+                "TCheckbutton": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
+                "Treeview": {"configure": {"background": "#333333", "fieldbackground": "#333333", "foreground": "#ffffff"}},
+            },
+        )
     
     def sort_by(self, col):
         """Sort items and treeview by given column."""
