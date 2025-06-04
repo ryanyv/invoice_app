@@ -2,6 +2,8 @@ import os
 from get_data import get_pn_for, get_sdr_for, load_weight_table, get_discount
 from price_calculator import calculate_total_mass, calculate_price, calculate_length_from_mass, calculate_price_per_kg_from_total
 from datetime import datetime
+import requests
+from num2words import num2words
 from reportlab.lib.pagesizes import A4, landscape
 
 # Define PAGE_WIDTH, PAGE_HEIGHT for landscape A4
@@ -34,6 +36,43 @@ os.makedirs(DEPENDENCIES_DIR, exist_ok=True)
 # Constants
 INVOICE_COUNTER_FILE = os.path.join(DEPENDENCIES_DIR, "invoice_counter.json")
 COMPANY_NAME = "شرکت پلی غرب"
+
+# Default company information used when optional fields are not provided
+DEFAULT_COMPANY_INFO = {
+    "name": "شرکت پلی غرب اتصال ایرانیان (سهامی خاص)",
+    "address": "میرداماد میدان محسنی خیابان شاه نظری کوچه دوم پلاک ۳۴ واحد اول شمالی",
+    "phone": "02122922999",
+    "fax": "02122278331",
+}
+
+
+def fetch_current_jalali_date() -> str:
+    """Return today's date in Jalali format using an internet time service."""
+    try:
+        resp = requests.get("https://worldtimeapi.org/api/ip", timeout=5)
+        resp.raise_for_status()
+        iso_dt = resp.json().get("datetime")
+        dt = datetime.fromisoformat(iso_dt.rstrip("Z")) if iso_dt else datetime.utcnow()
+    except Exception:
+        dt = datetime.utcnow()
+    return JalaliDate(dt).strftime("%Y/%m/%d")
+
+
+def number_to_words(value: float) -> str:
+    """Convert a numeric value to Persian words."""
+    try:
+        return num2words(int(value), lang="fa")
+    except Exception:
+        return str(value)
+
+
+def append_total_words(elements, total: float):
+    """Append the total amount in words to the elements list."""
+    words = number_to_words(total)
+    line = str(get_display(reshape(f"مبلغ به حروف: {words} تومان")))
+    style = ParagraphStyle(name="TotalWords", fontName=DEFAULT_FONT, fontSize=10, alignment=TA_RIGHT)
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(line, style))
 
 
 # Helper for invoice numbering
@@ -78,7 +117,7 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
     if output_dir is None:
         output_dir = os.path.join(os.path.dirname(__file__), "خروجی")
     os.makedirs(output_dir, exist_ok=True)
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     now = datetime.now().strftime("%d-%m")
     # Prepare and shape header texts for RTL display
     sh_company = str(get_display(reshape(COMPANY_NAME)))
@@ -187,6 +226,9 @@ def generate_pdf(customer_name: str, invoice_number: str, items: list[dict], out
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total amount in words
+    append_total_words(elements, total_price_all)
+
     # Generate PDF with logo on pages
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     # Invoice counter is managed by the GUI application
@@ -207,7 +249,7 @@ def generate_pdf_with_added_value(
     os.makedirs(output_dir, exist_ok=True)
 
     # Dates and header shaping
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     now = datetime.now().strftime("%d-%m")
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
@@ -318,6 +360,9 @@ def generate_pdf_with_added_value(
         elements.append(Paragraph(sh_explanation_label, explanation_label_style))
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
+    
+    # Write total in words
+    append_total_words(elements, final_total)
 
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
@@ -342,7 +387,7 @@ def generate_pdf_with_discount(
     os.makedirs(output_dir, exist_ok=True)
 
     # Dates and header shaping
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -476,6 +521,9 @@ def generate_pdf_with_discount(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     # Invoice counter is managed by the GUI application
@@ -500,7 +548,7 @@ def generate_pdf_with_custom_discount(
     os.makedirs(output_dir, exist_ok=True)
 
     # Dates and header shaping
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -612,6 +660,9 @@ def generate_pdf_with_custom_discount(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     # Invoice counter is managed by the GUI application
@@ -635,7 +686,7 @@ def generate_pdf_with_discount_and_added_value(
     os.makedirs(output_dir, exist_ok=True)
 
     # Dates and header shaping
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -781,6 +832,9 @@ def generate_pdf_with_discount_and_added_value(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     # Build PDF
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     # Invoice counter is managed by the GUI application
@@ -804,7 +858,7 @@ def generate_pdf_with_custom_discount_and_added_value(
     os.makedirs(output_dir, exist_ok=True)
 
     # Dates and header shaping
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -914,6 +968,9 @@ def generate_pdf_with_custom_discount_and_added_value(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
 
     # Invoice counter is managed by the GUI application
@@ -979,7 +1036,7 @@ def generate_connection_invoice_pdf(
         output_dir = os.path.join(os.path.dirname(__file__), "خروجی")
     os.makedirs(output_dir, exist_ok=True)
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1104,6 +1161,9 @@ def generate_connection_invoice_pdf(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, total_price_all)
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF saved to: {pdf_file}")
     return pdf_file  
@@ -1135,7 +1195,7 @@ def generate_connection_invoice_pdf_with_added_value(
     from persiantools import digits
     from khayyam import JalaliDate
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1260,6 +1320,9 @@ def generate_connection_invoice_pdf_with_added_value(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF with added value saved to: {pdf_file}")
     return pdf_file
@@ -1293,7 +1356,7 @@ def generate_connection_invoice_pdf_with_discount(
     from khayyam import JalaliDate
     import csv
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1442,6 +1505,9 @@ def generate_connection_invoice_pdf_with_discount(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF with discount saved to: {pdf_file}")
     return pdf_file
@@ -1475,7 +1541,7 @@ def generate_connection_invoice_pdf_with_custom_discount(
     from persiantools import digits
     from khayyam import JalaliDate
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1606,6 +1672,9 @@ def generate_connection_invoice_pdf_with_custom_discount(
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
 
+    # Write total in words
+    append_total_words(elements, final_total)
+
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF with custom discount saved to: {pdf_file}")
     return pdf_file
@@ -1639,7 +1708,7 @@ def generate_connection_invoice_pdf_with_discount_and_added_value(
     from khayyam import JalaliDate
     import csv
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1834,7 +1903,7 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
     from persiantools import digits
     from khayyam import JalaliDate
 
-    date_jalali = JalaliDate.today().strftime("%Y/%m/%d")
+    date_jalali = fetch_current_jalali_date()
     sh_company = str(get_display(reshape(COMPANY_NAME)))
     sh_date    = str(get_display(reshape(f"تاریخ: {date_jalali}")))
     sh_inv     = str(get_display(reshape(f"شماره پیش‌فاکتور: {invoice_number}")))
@@ -1974,6 +2043,9 @@ def generate_connection_invoice_pdf_with_custom_discount_and_added_value(
         elements.append(Paragraph(sh_explanation_label, explanation_label_style))
         elements.append(Paragraph(sh_explanation, explanation_text_style))
         elements.append(Spacer(1, 12))
+
+    # Write total in words
+    append_total_words(elements, final_total)
 
     doc.build(elements, onFirstPage=_draw_logo, onLaterPages=_draw_logo)
     print(f"Connection invoice PDF with custom discount and added value saved to: {pdf_file}")
