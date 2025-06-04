@@ -94,6 +94,8 @@ class InvoiceApp(tk.Tk):
         self.update_idletasks()
         self.minsize(900, 500)
         self.resizable(True, True)
+        # Apply initial theme (light by default)
+        self.apply_theme(self.dark_mode_var.get())
 
     def load_config(self):
         config_path = os.path.join(os.path.expanduser("~"), ".invoice_app_config.json")
@@ -1683,8 +1685,53 @@ class InvoiceApp(tk.Tk):
             self.standard_tree.set(iid, "no", idx)
 
     def on_toggle_dark_mode(self):
-        # Theme switching will be implemented here.
-        pass
+        self.apply_theme(self.dark_mode_var.get())
+
+    def apply_theme(self, dark=False):
+        """Apply light or dark theme across widgets."""
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        if dark:
+            bg = "#2b2b2b"
+            fg = "#ffffff"
+            entry_bg = "#404040"
+            btn_bg = "#507ba7"
+        else:
+            bg = self.cget("bg") if self.cget("bg") else "SystemButtonFace"
+            fg = "black"
+            entry_bg = "white"
+            btn_bg = "#dcdcdc"
+
+        style.configure(".", background=bg, foreground=fg)
+        style.configure("TFrame", background=bg)
+        style.configure("TLabel", background=bg, foreground=fg)
+        style.configure("TCheckbutton", background=bg, foreground=fg)
+        style.configure("Treeview", background=entry_bg, fieldbackground=entry_bg, foreground=fg)
+        style.map("Treeview", background=[("selected", btn_bg)])
+
+        self.configure(bg=bg)
+        self._apply_colors(self, bg, fg, entry_bg, btn_bg)
+
+    def _apply_colors(self, widget, bg, fg, entry_bg, btn_bg):
+        """Recursively update Tk widget colors."""
+        for child in widget.winfo_children():
+            if isinstance(child, (tk.Frame, tk.LabelFrame)):
+                child.configure(bg=bg)
+            elif isinstance(child, tk.Label):
+                child.configure(bg=bg, fg=fg)
+            elif isinstance(child, tk.Entry):
+                child.configure(bg=entry_bg, fg=fg, insertbackground=fg)
+            elif isinstance(child, tk.Text):
+                child.configure(bg=entry_bg, fg=fg, insertbackground=fg)
+            elif isinstance(child, tk.Button):
+                child.configure(bg=btn_bg, fg=fg, activebackground=btn_bg)
+            elif isinstance(child, tk.Checkbutton):
+                child.configure(bg=bg, fg=fg, selectcolor=bg, activebackground=bg)
+            self._apply_colors(child, bg, fg, entry_bg, btn_bg)
     
     def sort_by(self, col):
         """Sort items and treeview by given column."""
