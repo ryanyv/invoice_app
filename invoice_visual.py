@@ -1,5 +1,7 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import messagebox, filedialog
+import ttkbootstrap as tb
+from ttkbootstrap import ttk
 import datetime
 import shutil
 
@@ -19,11 +21,10 @@ import pathlib
 import glob
 import time
 import sys
-import platform
 
-class InvoiceApp(tk.Tk):
+class InvoiceApp(tb.Window):
     def __init__(self):
-        super().__init__()
+        super().__init__(themename="flatly")
         self.customer_name_var = tk.StringVar()
         self.action_frame = None
         # --- Moved: Checkbox state and added-value/discount variables ---
@@ -34,7 +35,7 @@ class InvoiceApp(tk.Tk):
         self.custom_discount_var = tk.StringVar(value="")
 
         # --- Appearance management ---
-        self.style = ttk.Style()
+        self.style = tb.Style()
         self.default_theme = self.style.theme_use()
         self.system_bg = self.cget("background")
         self.appearance_var = tk.StringVar(value="system")
@@ -1709,61 +1710,13 @@ class InvoiceApp(tk.Tk):
 
     def apply_appearance(self):
         mode = self.appearance_var.get()
-        if not self._set_mac_appearance(mode):
-            if mode == "system":
-                self.style.theme_use(self.default_theme)
-                self.tk_setPalette(background=self.system_bg, foreground="black")
-            elif mode == "light":
-                if "light" not in self.style.theme_names():
-                    self._create_light_theme()
-                self.style.theme_use("light")
-                self.tk_setPalette(background="#f0f0f0", foreground="black")
-            else:  # dark
-                if "dark" not in self.style.theme_names():
-                    self._create_dark_theme()
-                self.style.theme_use("dark")
-                self.tk_setPalette(background="#2e2e2e", foreground="white", activeBackground="#404040", activeForeground="white")
-        else:
-            # When using native macOS appearance, stick to the default theme
+        if mode == "system":
             self.style.theme_use(self.default_theme)
+        elif mode == "light":
+            self.style.theme_use("flatly")
+        else:
+            self.style.theme_use("superhero")
         self.save_config()
-
-    def _set_mac_appearance(self, mode):
-        if platform.system() != "Darwin":
-            return False
-        mapping = {"system": "auto", "light": "aqua", "dark": "darkaqua", None: "auto"}
-        try:
-            self.tk.call("update")
-            self.tk.call("tk::unsupported::MacWindowStyle", "appearance", self._w, mapping.get(mode, "auto"))
-            return True
-        except tk.TclError:
-            return False
-
-    def _create_light_theme(self):
-        self.style.theme_create(
-            "light",
-            parent="clam",
-            settings={
-                ".": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
-                "TFrame": {"configure": {"background": "#f0f0f0"}},
-                "TLabel": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
-                "TCheckbutton": {"configure": {"background": "#f0f0f0", "foreground": "#000000"}},
-                "Treeview": {"configure": {"background": "#ffffff", "fieldbackground": "#ffffff", "foreground": "#000000"}},
-            },
-        )
-
-    def _create_dark_theme(self):
-        self.style.theme_create(
-            "dark",
-            parent="clam",
-            settings={
-                ".": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
-                "TFrame": {"configure": {"background": "#2e2e2e"}},
-                "TLabel": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
-                "TCheckbutton": {"configure": {"background": "#2e2e2e", "foreground": "#ffffff"}},
-                "Treeview": {"configure": {"background": "#333333", "fieldbackground": "#333333", "foreground": "#ffffff"}},
-            },
-        )
     
     def sort_by(self, col):
         """Sort items and treeview by given column."""
