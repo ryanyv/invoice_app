@@ -35,9 +35,7 @@ class InvoiceApp(tb.Window):
         self.custom_discount_var = tk.StringVar(value="")
 
         # --- Appearance management ---
-        self.style = tb.Style()
         self.default_theme = self.style.theme_use()
-        self.system_bg = self.cget("background")
         self.appearance_var = tk.StringVar(value="system")
         # --- Begin expanded menu bar setup ---
         menubar = tk.Menu(self)
