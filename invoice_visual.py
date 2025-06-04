@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import tkinter.font as tkfont
 import datetime
 import shutil
 
@@ -24,6 +25,10 @@ import platform
 class InvoiceApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.font_family = "Segoe UI" if platform.system() == "Windows" else "Helvetica"
+        tkfont.nametofont("TkDefaultFont").configure(family=self.font_family)
+        tkfont.nametofont("TkTextFont").configure(family=self.font_family)
+        tkfont.nametofont("TkFixedFont").configure(family=self.font_family)
         self.customer_name_var = tk.StringVar()
         self.action_frame = None
         # --- Moved: Checkbox state and added-value/discount variables ---
@@ -89,6 +94,12 @@ class InvoiceApp(tk.Tk):
             label="Dark",
             variable=self.appearance_var,
             value="dark",
+            command=self.apply_appearance
+        )
+        appearance_menu.add_radiobutton(
+            label="Windows",
+            variable=self.appearance_var,
+            value="windows",
             command=self.apply_appearance
         )
         menubar.add_cascade(label="Appearance", menu=appearance_menu)
@@ -316,7 +327,7 @@ class InvoiceApp(tk.Tk):
         explanation_frame = tk.LabelFrame(explanation_outer_frame, text="Explanation / Notes")
         explanation_frame.pack(fill='x', expand=True)
 
-        self.explanation_text_widget = tk.Text(explanation_frame, height=3, wrap=tk.WORD, font=("Helvetica", 9))
+        self.explanation_text_widget = tk.Text(explanation_frame, height=3, wrap=tk.WORD, font=(self.font_family, 9))
         self.explanation_text_widget.pack(fill='x', expand=True, padx=5, pady=5)
         # Optional: Add a scrollbar if you expect very long explanations
         # scroll = ttk.Scrollbar(explanation_frame, command=self.explanation_text_widget.yview)
@@ -328,12 +339,12 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.added_frame,
             text="Added Value (10%):",
-            font=("Helvetica", 11, "bold")
+            font=(self.font_family, 11, "bold")
         ).pack(side='left')
         tk.Label(
             self.added_frame,
             textvariable=self.added_value_var,
-            font=("Helvetica", 11, "bold"),
+            font=(self.font_family, 11, "bold"),
             anchor='e'
         ).pack(side='right')
         # Do not pack added_frame now; it will appear when toggled
@@ -343,7 +354,7 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.discount_frame,
             text="Discount:",
-            font=("Helvetica", 11, "bold")
+            font=(self.font_family, 11, "bold")
         ).pack(side='left')
         # Custom discount percent entry (always appears to the right of the label)
         self.custom_discount_entry = tk.Entry(
@@ -358,7 +369,7 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.discount_frame,
             textvariable=self.discount_value_var,
-            font=("Helvetica", 11, "bold"),
+            font=(self.font_family, 11, "bold"),
             anchor='e'
         ).pack(side='right')
         # Do not pack discount_frame now; it will appear when toggled
@@ -366,9 +377,9 @@ class InvoiceApp(tk.Tk):
         # Subtotal display
         self.subtotal_frame = tk.Frame(parent_frame)
         self.subtotal_frame.pack(fill='x', padx=10, pady=5)
-        tk.Label(self.subtotal_frame, text="Subtotal:", font=("Helvetica", 11, "bold")).pack(side='left')
+        tk.Label(self.subtotal_frame, text="Subtotal:", font=(self.font_family, 11, "bold")).pack(side='left')
         self.subtotal_var = tk.StringVar(value="0.00")
-        tk.Label(self.subtotal_frame, textvariable=self.subtotal_var, font=("Helvetica", 11, "bold"), anchor='e').pack(side='right')
+        tk.Label(self.subtotal_frame, textvariable=self.subtotal_var, font=(self.font_family, 11, "bold"), anchor='e').pack(side='right')
 
         # Generate Invoice button below subtotal
         self.generate_btn_frame = tk.Frame(parent_frame)
@@ -377,7 +388,7 @@ class InvoiceApp(tk.Tk):
             self.generate_btn_frame,
             text="Generate Invoice",
             command=self.generate_invoice,
-            font=("Helvetica", 13, "bold"),
+            font=(self.font_family, 13, "bold"),
             bg="#d3d3d3",
             fg="black",
             height=2,
@@ -609,7 +620,7 @@ class InvoiceApp(tk.Tk):
 
         # --- Add Item Button ---
         self.connection_add_btn = tk.Button(
-            item_frame, text="Add Item", state="disabled", font=("Helvetica", 10, "bold"),
+            item_frame, text="Add Item", state="disabled", font=(self.font_family, 10, "bold"),
             command=self.add_connection_item_action
         )
         self.connection_add_btn.grid(row=1, column=9, padx=2, pady=2, sticky='w')
@@ -647,7 +658,7 @@ class InvoiceApp(tk.Tk):
         connection_explanation_frame = tk.LabelFrame(connection_explanation_outer_frame, text="Explanation / Notes")
         connection_explanation_frame.pack(fill='x', expand=True)
 
-        self.connection_explanation_text_widget = tk.Text(connection_explanation_frame, height=3, wrap=tk.WORD, font=("Helvetica", 9))
+        self.connection_explanation_text_widget = tk.Text(connection_explanation_frame, height=3, wrap=tk.WORD, font=(self.font_family, 9))
         self.connection_explanation_text_widget.pack(fill='x', expand=True, padx=5, pady=5)
 
         # --- Added Value display (hidden until checkbox checked, just like in standard tab) ---
@@ -656,12 +667,12 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.connection_added_frame,
             text="Added Value (10%):",
-            font=("Helvetica", 11, "bold")
+            font=(self.font_family, 11, "bold")
         ).pack(side='left')
         tk.Label(
             self.connection_added_frame,
             textvariable=self.connection_added_value_var,
-            font=("Helvetica", 11, "bold"),
+            font=(self.font_family, 11, "bold"),
             anchor='e'
         ).pack(side='right')
         # Do not pack self.connection_added_frame now; will be controlled by menu option
@@ -672,7 +683,7 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.connection_discount_frame,
             text="Discount:",
-            font=("Helvetica", 11, "bold")
+            font=(self.font_family, 11, "bold")
         ).pack(side='left')
         # Custom discount percent entry (mirrored from standard tab, will be shared later)
         self.connection_custom_discount_entry = tk.Entry(
@@ -687,7 +698,7 @@ class InvoiceApp(tk.Tk):
         tk.Label(
             self.connection_discount_frame,
             textvariable=self.connection_discount_value_var,
-            font=("Helvetica", 11, "bold"),
+            font=(self.font_family, 11, "bold"),
             anchor='e'
         ).pack(side='right')
         # Do not pack self.connection_discount_frame now; will be controlled by menu option
@@ -696,9 +707,9 @@ class InvoiceApp(tk.Tk):
         subtotal_frame = tk.Frame(parent_frame)
         self.connection_subtotal_frame = subtotal_frame
         subtotal_frame.pack(fill='x', padx=10, pady=5)
-        tk.Label(subtotal_frame, text="Subtotal:", font=("Helvetica", 11, "bold")).pack(side='left')
+        tk.Label(subtotal_frame, text="Subtotal:", font=(self.font_family, 11, "bold")).pack(side='left')
         self.connection_subtotal_var = tk.StringVar(value="0.00")
-        tk.Label(subtotal_frame, textvariable=self.connection_subtotal_var, font=("Helvetica", 11, "bold"), anchor='e').pack(side='right')
+        tk.Label(subtotal_frame, textvariable=self.connection_subtotal_var, font=(self.font_family, 11, "bold"), anchor='e').pack(side='right')
 
         # --- Generate Invoice Button ---
         generate_btn_frame = tk.Frame(parent_frame)
@@ -707,7 +718,7 @@ class InvoiceApp(tk.Tk):
             generate_btn_frame,
             text="Generate Invoice",
             command=lambda: generate_connection_invoice(),
-            font=("Helvetica", 13, "bold"),
+            font=(self.font_family, 13, "bold"),
             bg="#d3d3d3",
             fg="black",
             height=2,
@@ -1718,11 +1729,17 @@ class InvoiceApp(tk.Tk):
                     self._create_light_theme()
                 self.style.theme_use("light")
                 self.tk_setPalette(background="#f0f0f0", foreground="black")
-            else:  # dark
+            elif mode == "dark":
                 if "dark" not in self.style.theme_names():
                     self._create_dark_theme()
                 self.style.theme_use("dark")
                 self.tk_setPalette(background="#2e2e2e", foreground="white", activeBackground="#404040", activeForeground="white")
+            elif mode == "windows":
+                if platform.system() == "Windows" and "vista" in self.style.theme_names():
+                    self.style.theme_use("vista")
+                else:
+                    self.style.theme_use(self.default_theme)
+                self.tk_setPalette(background=self.system_bg, foreground="black")
         else:
             # When using native macOS appearance, stick to the default theme
             self.style.theme_use(self.default_theme)
