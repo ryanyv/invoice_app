@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-# -*- mode: python ; coding: utf-8 -*-
 import os
 # Use a fixed extraction directory so embedded JSON persists across launches
 runtime_tmpdir = os.path.expanduser(os.path.join("~", ".visual_tmp"))
