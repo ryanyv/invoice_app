@@ -19,6 +19,7 @@ import pathlib
 import glob
 import time
 import sys
+import platform
 
 class InvoiceApp(tk.Tk):
     def __init__(self):
@@ -1708,20 +1709,35 @@ class InvoiceApp(tk.Tk):
 
     def apply_appearance(self):
         mode = self.appearance_var.get()
-        if mode == "system":
+        if not self._set_mac_appearance(mode):
+            if mode == "system":
+                self.style.theme_use(self.default_theme)
+                self.tk_setPalette(background=self.system_bg, foreground="black")
+            elif mode == "light":
+                if "light" not in self.style.theme_names():
+                    self._create_light_theme()
+                self.style.theme_use("light")
+                self.tk_setPalette(background="#f0f0f0", foreground="black")
+            else:  # dark
+                if "dark" not in self.style.theme_names():
+                    self._create_dark_theme()
+                self.style.theme_use("dark")
+                self.tk_setPalette(background="#2e2e2e", foreground="white", activeBackground="#404040", activeForeground="white")
+        else:
+            # When using native macOS appearance, stick to the default theme
             self.style.theme_use(self.default_theme)
-            self.tk_setPalette(background=self.system_bg, foreground="black")
-        elif mode == "light":
-            if "light" not in self.style.theme_names():
-                self._create_light_theme()
-            self.style.theme_use("light")
-            self.tk_setPalette(background="#f0f0f0", foreground="black")
-        else:  # dark
-            if "dark" not in self.style.theme_names():
-                self._create_dark_theme()
-            self.style.theme_use("dark")
-            self.tk_setPalette(background="#2e2e2e", foreground="white", activeBackground="#404040", activeForeground="white")
         self.save_config()
+
+    def _set_mac_appearance(self, mode):
+        if platform.system() != "Darwin":
+            return False
+        mapping = {"system": "auto", "light": "aqua", "dark": "darkaqua", None: "auto"}
+        try:
+            self.tk.call("update")
+            self.tk.call("tk::unsupported::MacWindowStyle", "appearance", self._w, mapping.get(mode, "auto"))
+            return True
+        except tk.TclError:
+            return False
 
     def _create_light_theme(self):
         self.style.theme_create(
