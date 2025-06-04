@@ -61,12 +61,16 @@ def calculate_price(length_meters, diameter, sdr, price_per_kg):
     return mass * price_per_kg
 
 
-def calculate_price_per_kg_from_total(total_price, diameter, sdr):
+def calculate_price_per_kg_from_total(total_price, length_meters, diameter, sdr):
     """
-    Calculate the price per kilogram given total price, pipe diameter, and SDR.
+    Calculate the price per kilogram from a total price and pipe specification.
+
+    This is the inverse operation of ``calculate_price`` and therefore requires
+    the pipe length in meters to derive the total mass used in the calculation.
 
     Args:
-        total_price (float or int): Total price.
+        total_price (float or int): Total price for ``length_meters`` of pipe.
+        length_meters (float or int): Length of the pipe in meters.
         diameter (float or int): Pipe diameter in mm.
         sdr (float or int): SDR value.
 
@@ -74,22 +78,25 @@ def calculate_price_per_kg_from_total(total_price, diameter, sdr):
         float: Price per kilogram.
 
     Raises:
-        ValueError: If total_price cannot be converted to float, or if mass is zero/invalid.
-        KeyError/ValueError: Propagated from calculate_total_mass for invalid diameter or SDR.
+        ValueError: If inputs cannot be converted to float, or if the calculated
+            mass is zero/invalid.
+        KeyError/ValueError: Propagated from ``calculate_total_mass`` for
+            invalid diameter or SDR.
     """
-    # Validate and convert total price
+
+    # Validate and convert numeric inputs
     try:
         total_price = float(total_price)
     except (TypeError, ValueError):
         raise ValueError(f"Invalid total price: {total_price!r}")
 
-    # Calculate mass per meter
-    mass_per_meter = calculate_total_mass(1, diameter, sdr)
-    if mass_per_meter <= 0:
-        raise ValueError(f"Mass per meter is invalid: {mass_per_meter}")
+    try:
+        length = float(length_meters)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid pipe length: {length_meters!r}")
 
-    # Assuming total length = 1 meter for price per kg calculation
-    mass = mass_per_meter  # mass for 1 meter
+    # Calculate total mass for the provided length
+    mass = calculate_total_mass(length, diameter, sdr)
 
     if mass <= 0:
         raise ValueError(f"Mass is invalid: {mass}")
