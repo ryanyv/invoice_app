@@ -1540,91 +1540,121 @@ class InvoiceApp(tk.Tk):
         self.diameter_data_by_sdr = {sdr: sorted(diams) for sdr, diams in diameter_data_by_sdr.items()}
 
     def on_length_changed(self, event):
-        # Automatically update total_mass when length is edited
+        """Update dependent fields when pipe length changes."""
+        length_str = self.standard_entries["length"].get().strip()
         try:
-            length = float(self.standard_entries["length"].get().strip())
+            length = float(length_str) if length_str else 0.0
             diameter = float(self.standard_entries["diameter"].get())
             sdr = float(self.standard_entries["sdr"].get())
             total_mass = calculate_total_mass(length, diameter, sdr)
-            mass_entry = self.standard_entries["total_mass"]
-            mass_entry.delete(0, tk.END)
-            mass_entry.insert(0, str(round(total_mass, 3)))
-            # --- Patch: Also update total_price if price_per_kg is available ---
-            price_per_kg_str = self.standard_entries["price_per_kg"].get().strip()
-            if price_per_kg_str:
-                price_per_kg = float(price_per_kg_str)
-                total_price = total_mass * price_per_kg
-                tp_entry = self.standard_entries["total_price"]
-                tp_entry.delete(0, tk.END)
-                tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
-            pass
+            total_mass = 0.0
+        mass_entry = self.standard_entries["total_mass"]
+        mass_entry.delete(0, tk.END)
+        if total_mass:
+            mass_entry.insert(0, str(round(total_mass, 3)))
+        price_per_kg_str = self.standard_entries["price_per_kg"].get().strip()
+        try:
+            price_per_kg = float(price_per_kg_str) if price_per_kg_str else 0.0
+            total_price = total_mass * price_per_kg
+        except Exception:
+            total_price = 0.0
+        tp_entry = self.standard_entries["total_price"]
+        tp_entry.delete(0, tk.END)
+        if total_price:
+            tp_entry.insert(0, str(int(round(total_price))))
     
     def on_mass_changed(self, event):
-        # Automatically update length when total_mass is edited
+        """Update length and price when total mass is edited."""
+        mass_str = self.standard_entries["total_mass"].get().strip()
         try:
-            total_mass = float(self.standard_entries["total_mass"].get().strip())
+            total_mass = float(mass_str) if mass_str else 0.0
             diameter = float(self.standard_entries["diameter"].get())
             sdr = float(self.standard_entries["sdr"].get())
             length = calculate_length_from_mass(total_mass, diameter, sdr)
-            length_entry = self.standard_entries["length"]
-            length_entry.delete(0, tk.END)
-            length_entry.insert(0, str(round(length, 3)))
         except Exception:
-            pass
+            total_mass = 0.0
+            length = 0.0
+        length_entry = self.standard_entries["length"]
+        length_entry.delete(0, tk.END)
+        if length:
+            length_entry.insert(0, str(round(length, 3)))
+        price_per_kg_str = self.standard_entries["price_per_kg"].get().strip()
+        try:
+            price_per_kg = float(price_per_kg_str) if price_per_kg_str else 0.0
+            total_price = total_mass * price_per_kg
+        except Exception:
+            total_price = 0.0
+        tp_entry = self.standard_entries["total_price"]
+        tp_entry.delete(0, tk.END)
+        if total_price:
+            tp_entry.insert(0, str(int(round(total_price))))
     
     def on_price_changed(self, event):
-        # Automatically update total_price when price_per_kg is edited
+        """Update total price when price per kg changes."""
+        price_str = self.standard_entries["price_per_kg"].get().strip()
+        mass_str = self.standard_entries["total_mass"].get().strip()
         try:
-            price_per_kg = float(self.standard_entries["price_per_kg"].get().strip())
-            total_mass = float(self.standard_entries["total_mass"].get().strip())
-            # Compute total price by multiplying price per kg by total mass
+            price_per_kg = float(price_str) if price_str else 0.0
+            total_mass = float(mass_str) if mass_str else 0.0
             total_price = total_mass * price_per_kg
-            tp_entry = self.standard_entries["total_price"]
-            tp_entry.delete(0, tk.END)
-            tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
-            pass
+            total_price = 0.0
+        tp_entry = self.standard_entries["total_price"]
+        tp_entry.delete(0, tk.END)
+        if total_price:
+            tp_entry.insert(0, str(int(round(total_price))))
     
     def on_total_price_changed(self, event):
-        # Automatically update price_per_kg when total_price is edited
+        """Update price per kg when total price is edited."""
+        price_str = self.standard_entries["total_price"].get().strip()
         try:
-            total_price = float(self.standard_entries["total_price"].get().strip())
-            # Determine total mass: use entered mass or calculate from length
-            mass_input = self.standard_entries["total_mass"].get().strip()
+            total_price = float(price_str) if price_str else 0.0
+        except Exception:
+            total_price = 0.0
+        mass_input = self.standard_entries["total_mass"].get().strip()
+        try:
             if mass_input:
                 total_mass = float(mass_input)
             else:
-                length = float(self.standard_entries["length"].get().strip())
+                length_str = self.standard_entries["length"].get().strip()
+                length = float(length_str) if length_str else 0.0
                 diameter = float(self.standard_entries["diameter"].get())
                 sdr = float(self.standard_entries["sdr"].get())
                 total_mass = calculate_total_mass(length, diameter, sdr)
-            # Compute price per kg by dividing by mass
-            price_per_kg = total_price / total_mass
-            pp_entry = self.standard_entries["price_per_kg"]
-            pp_entry.delete(0, tk.END)
+            price_per_kg = total_price / total_mass if total_mass else 0.0
+        except Exception:
+            price_per_kg = 0.0
+        pp_entry = self.standard_entries["price_per_kg"]
+        pp_entry.delete(0, tk.END)
+        if price_per_kg:
             formatted_price = f"{price_per_kg:,.2f}"
             pp_entry.insert(0, formatted_price)
-        except Exception:
-            pass
     
     def on_diameter_changed(self, event):
-        # Recalculate total_mass and total_price based on new diameter and existing length
+        """Recalculate mass and price when diameter changes."""
+        length_str = self.standard_entries["length"].get().strip()
+        price_str = self.standard_entries["price_per_kg"].get().strip()
         try:
-            length = float(self.standard_entries["length"].get().strip())
+            length = float(length_str) if length_str else 0.0
             diameter = float(self.standard_entries["diameter"].get().strip())
             sdr = float(self.standard_entries["sdr"].get().strip())
             total_mass = calculate_total_mass(length, diameter, sdr)
-            mass_entry = self.standard_entries["total_mass"]
-            mass_entry.delete(0, tk.END)
-            mass_entry.insert(0, str(round(total_mass, 3)))
-            price_per_kg = float(self.standard_entries["price_per_kg"].get().strip())
-            total_price = total_mass * price_per_kg
-            tp_entry = self.standard_entries["total_price"]
-            tp_entry.delete(0, tk.END)
-            tp_entry.insert(0, str(int(round(total_price))))
         except Exception:
-            pass
+            total_mass = 0.0
+        mass_entry = self.standard_entries["total_mass"]
+        mass_entry.delete(0, tk.END)
+        if total_mass:
+            mass_entry.insert(0, str(round(total_mass, 3)))
+        try:
+            price_per_kg = float(price_str) if price_str else 0.0
+            total_price = total_mass * price_per_kg
+        except Exception:
+            total_price = 0.0
+        tp_entry = self.standard_entries["total_price"]
+        tp_entry.delete(0, tk.END)
+        if total_price:
+            tp_entry.insert(0, str(int(round(total_price))))
     
     def update_add_button_state(self, event=None):
         """Enable the Add Item button only when the required fields are populated."""
