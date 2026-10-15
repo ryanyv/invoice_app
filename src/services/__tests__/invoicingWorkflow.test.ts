@@ -268,6 +268,100 @@ assert(loadedToman?.totalAmount === 10000000, 'Toman invoice total unchanged');
 assert(loadedRial?.totalAmount === 100000000, 'Rial invoice total unchanged');
 console.log('✓ Test 6 Passed: Currency consistency preserved across invoices.');
 
+// Test 7: Invoice Counter State Sync & Overwrite Prevention
+console.log('Test 7: Invoice Counter State Sync & Overwrite Prevention');
+StorageService.saveSettings({ ...StorageService.getSettings(), invoiceCounter: 200, currencyUnit: 'تومان' });
+const dupNum = StorageService.getNextInvoiceNumber();
+assert(dupNum === '201', 'Next invoice number is 201');
+const syncedSettings = StorageService.getSettings();
+assert(syncedSettings.invoiceCounter === 201, 'Settings invoiceCounter updated to 201 in storage');
+
+const duplicatedInv: Invoice = {
+  ...initialInvoice,
+  id: 'inv_dup_201',
+  invoiceNumber: dupNum,
+  customerName: 'مشتری الف (تکثیر شده)',
+  totalAmount: 1000,
+};
+StorageService.saveInvoice(duplicatedInv);
+
+// Create another invoice with separate ID (simulating collision scenario)
+const subsequentInv: Invoice = {
+  ...initialInvoice,
+  id: 'inv_subsequent_201',
+  invoiceNumber: dupNum,
+  customerName: 'مشتری ب (جدید)',
+  totalAmount: 2000,
+};
+StorageService.saveInvoice(subsequentInv);
+
+const currentList = StorageService.getInvoices();
+const foundDup = currentList.find((i) => i.id === 'inv_dup_201');
+const foundSub = currentList.find((i) => i.id === 'inv_subsequent_201');
+assert(foundDup !== undefined, 'Duplicated invoice is NOT overwritten by subsequent invoice');
+assert(foundSub !== undefined, 'Subsequent invoice is also preserved');
+console.log('✓ Test 7 Passed: Invoice counter state sync and overwrite prevention verified.');
+
+// Test 8: Non-Negative Input Clamping in Pipe Calculations
+console.log('Test 8: Non-Negative Input Clamping in Pipe Calculations');
+const negLengthPipe = computePipeItem(
+  {
+    peGrade: 'PE100',
+    diameter: 110,
+    sdr: 11,
+    pn: 16,
+    length: -25,
+    pricePerKg: 95000,
+  },
+  initialWeightTable
+);
+assert(negLengthPipe !== null, 'Pipe item computed');
+assert(negLengthPipe?.length === 0, 'Negative length clamped to 0');
+assert(negLengthPipe?.totalWeight === 0, 'Total weight clamped to 0');
+assert(negLengthPipe?.totalPrice === 0, 'Total price clamped to 0');
+
+const negPricePipe = computePipeItem(
+  {
+    peGrade: 'PE100',
+    diameter: 110,
+    sdr: 11,
+    pn: 16,
+    length: 100,
+    pricePerKg: -50000,
+  },
+  initialWeightTable
+);
+assert(negPricePipe !== null, 'Pipe item computed');
+assert(negPricePipe?.pricePerKg === 0, 'Negative price clamped to 0');
+assert(negPricePipe?.totalPrice === 0, 'Total price clamped to 0');
+console.log('✓ Test 8 Passed: Non-negative clamping operates correctly.');
+
+// Test 9: Corrupted Draft Resilience and Reactive Discount
+console.log('Test 9: Corrupted Draft Resilience and Reactive Discount');
+mockLocalStorage.setItem('pipecal_draft_invoice_v2', '{"items": [null], "customerName": 99999}');
+const recoveredDraft = StorageService.getDraft();
+assert(recoveredDraft !== null, 'Draft parsed from JSON');
+const validCustName = typeof recoveredDraft?.customerName === 'string' ? recoveredDraft.customerName : '';
+assert(validCustName === '', 'Non-string customerName falls back safely to empty string');
+
+const validItemsInSummary = computeInvoiceSummary({
+  items: (recoveredDraft?.items as any) || [],
+  includeDiscount: true,
+  discountPercentage: 15,
+  includeCustomDiscount: false,
+  customDiscountAmount: 0,
+  includeTax: false,
+  taxPercentage: 10,
+});
+assert(validItemsInSummary.subtotal === 0, 'Null item handled gracefully without crash');
+
+// Test auto-healing invalid JSON
+mockLocalStorage.setItem('pipecal_draft_invoice_v2', '{ corrupt json string');
+const corruptDraft = StorageService.getDraft();
+assert(corruptDraft === null, 'Corrupt draft returns null');
+assert(mockLocalStorage.getItem('pipecal_draft_invoice_v2') === null, 'Corrupt draft auto-healed and cleared from storage');
+console.log('✓ Test 9 Passed: Corrupted draft resilience and auto-heal verified.');
+
 console.log('\n========================================');
-console.log('ALL INVOICING WORKFLOW TESTS PASSED (6/6)');
+console.log('ALL INVOICING WORKFLOW TESTS PASSED (9/9)');
 console.log('========================================\n');

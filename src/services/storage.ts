@@ -82,7 +82,7 @@ export class StorageService {
     };
     try {
       const data = localStorage.getItem(KEYS.SETTINGS);
-      if (!data) return initialCompanySettings;
+      if (!data) return { ...initialCompanySettings };
       const parsed = JSON.parse(data);
       const userPrices = parsed?.basePipePrices || {};
       return {
@@ -95,7 +95,7 @@ export class StorageService {
         },
       };
     } catch {
-      return initialCompanySettings;
+      return { ...initialCompanySettings };
     }
   }
 
@@ -185,7 +185,7 @@ export class StorageService {
 
   static saveInvoice(invoice: Invoice): void {
     const list = this.getInvoices();
-    const idx = list.findIndex((i) => i.id === invoice.id || i.invoiceNumber === invoice.invoiceNumber);
+    const idx = list.findIndex((i) => i.id === invoice.id);
     if (idx !== -1) {
       list[idx] = invoice;
     } else {
@@ -203,8 +203,15 @@ export class StorageService {
   static getDraft(): Partial<Invoice> | null {
     try {
       const data = localStorage.getItem(KEYS.DRAFT);
-      return data ? JSON.parse(data) : null;
+      if (!data) return null;
+      const parsed = JSON.parse(data);
+      if (!parsed || typeof parsed !== 'object') {
+        this.clearDraft();
+        return null;
+      }
+      return parsed;
     } catch {
+      this.clearDraft();
       return null;
     }
   }

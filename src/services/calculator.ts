@@ -32,8 +32,11 @@ export function computePipeItem(
   const wpm = getWeightPerMeter(params.diameter, params.sdr, weightTable);
   if (wpm === null || wpm <= 0) return null;
 
-  const totalWeight = Number((wpm * params.length).toFixed(3));
-  const totalPrice = Math.round(totalWeight * params.pricePerKg);
+  const safeLength = Math.max(0, params.length);
+  const safePricePerKg = Math.max(0, params.pricePerKg);
+
+  const totalWeight = Number((wpm * safeLength).toFixed(3));
+  const totalPrice = Math.round(totalWeight * safePricePerKg);
 
   return {
     id: existingId || 'pipe_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -42,10 +45,10 @@ export function computePipeItem(
     diameter: params.diameter,
     sdr: params.sdr,
     pn: params.pn,
-    length: Number(params.length.toFixed(2)),
+    length: Number(safeLength.toFixed(2)),
     weightPerMeter: wpm,
     totalWeight,
-    pricePerKg: params.pricePerKg,
+    pricePerKg: safePricePerKg,
     totalPrice,
   };
 }
@@ -107,7 +110,10 @@ export function computeInvoiceSummary(params: {
   includeTax: boolean;
   taxPercentage: number;
 }) {
-  const subtotal = params.items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  const validItems = Array.isArray(params.items)
+    ? params.items.filter((i): i is InvoiceItem => Boolean(i && typeof i === 'object'))
+    : [];
+  const subtotal = validItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
 
   let discountAmount = 0;
   if (params.includeCustomDiscount && params.customDiscountAmount > 0) {
@@ -128,11 +134,11 @@ export function computeInvoiceSummary(params: {
 
   const totalAmount = amountAfterDiscount + taxAmount;
 
-  const totalPipeWeight = params.items
+  const totalPipeWeight = validItems
     .filter((i): i is PipeItem => i.type === 'pipe')
     .reduce((sum, p) => sum + (p.totalWeight || 0), 0);
 
-  const totalFittingCount = params.items
+  const totalFittingCount = validItems
     .filter((i) => i.type === 'fitting')
     .reduce((sum, f) => sum + (f.quantity || 0), 0);
 

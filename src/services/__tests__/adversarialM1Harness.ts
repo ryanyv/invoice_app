@@ -101,15 +101,18 @@ console.log('--- SECTION 1: CUSTOMER AUTOFILL BOUNDARY CONDITIONS ---');
 
   // User selects Customer A
   const selectCustomer = (name: string, subtotal: number) => {
-    const matched = customers.find((c) => c.name.trim().toLowerCase() === name.trim().toLowerCase());
+    const matched = customers.find((c) => c.name && c.name.trim().toLowerCase() === name.trim().toLowerCase());
     if (matched) {
-      if (matched.phone) currentPhone = matched.phone;
-      if (matched.address) currentAddress = matched.address;
+      currentPhone = matched.phone || '';
+      currentAddress = matched.address || '';
       if (matched.defaultDiscount && matched.defaultDiscount > 0) {
         hasCustomDiscount = true;
         currentCustomDiscount = matched.defaultDiscount <= 100
           ? Math.round((subtotal * matched.defaultDiscount) / 100)
           : matched.defaultDiscount;
+      } else {
+        hasCustomDiscount = false;
+        currentCustomDiscount = 0;
       }
     }
   };
@@ -140,8 +143,8 @@ console.log('--- SECTION 1: CUSTOMER AUTOFILL BOUNDARY CONDITIONS ---');
 
 // Test 1.5: Customer selected BEFORE adding items (subtotal = 0 at selection time)
 {
-  let currentCustomDiscount = 0;
-  let hasCustomDiscount = false;
+  let discountPercentage = 0;
+  let includeDiscount = false;
   const subtotalBeforeDiscounts = 0; // Empty builder state when user types customer name first
 
   const customerWithPercentDiscount: Customer = {
@@ -150,24 +153,25 @@ console.log('--- SECTION 1: CUSTOMER AUTOFILL BOUNDARY CONDITIONS ---');
     defaultDiscount: 10, // 10%
   };
 
-  // Replicating handleCustomerNameChange logic:
+  // Remediated handleCustomerNameChange sets percentage discount:
   if (customerWithPercentDiscount.defaultDiscount && customerWithPercentDiscount.defaultDiscount > 0) {
-    hasCustomDiscount = true;
     if (customerWithPercentDiscount.defaultDiscount <= 100) {
-      const discountVal = Math.round((subtotalBeforeDiscounts * customerWithPercentDiscount.defaultDiscount) / 100);
-      currentCustomDiscount = discountVal;
+      includeDiscount = true;
+      discountPercentage = customerWithPercentDiscount.defaultDiscount;
     }
   }
 
   // Now user adds items later: subtotal becomes 10,000,000
   const laterSubtotal = 10000000;
-  // Does currentCustomDiscount adapt or stay 0?
-  const discountLost = currentCustomDiscount === 0;
+  const computedDiscount = includeDiscount && discountPercentage > 0
+    ? Math.round((laterSubtotal * discountPercentage) / 100)
+    : 0;
+  const discountLost = computedDiscount === 0;
 
   recordResult(
     'TEST_1_5',
     !discountLost,
-    `Customer percentage discount computed when subtotal=0: discount=${currentCustomDiscount}`,
+    `Customer percentage discount computed when subtotal=0: discount=${computedDiscount}`,
     {
       category: 'Customer Discount Zeroed Out',
       description: 'Selecting customer before adding items calculates 10% of 0 = 0. Because customDiscountAmount is fixed amount in state, it never updates when items are subsequently added.',
@@ -358,8 +362,9 @@ console.log('\n--- SECTION 3: CORRUPTED DRAFT IN LOCALSTORAGE RECOVERY ---');
   const draft: any = StorageService.getDraft();
   let caughtError: any = null;
   try {
-    // Exact condition in InvoiceBuilder.tsx line 295:
-    const condition = draft && ((draft.items && draft.items.length > 0) || (draft.customerName && draft.customerName.trim().length > 0) || draft.invoiceNumber);
+    // Remediated condition in InvoiceBuilder.tsx:
+    const validCustomerName = typeof draft?.customerName === 'string' ? draft.customerName : '';
+    const condition = draft && ((draft.items && draft.items.length > 0) || (validCustomerName.trim().length > 0) || draft.invoiceNumber);
   } catch (err) {
     caughtError = err;
   }
@@ -382,8 +387,9 @@ console.log('\n--- SECTION 3: CORRUPTED DRAFT IN LOCALSTORAGE RECOVERY ---');
   const draft: any = StorageService.getDraft();
   let caughtError: any = null;
   try {
-    const items = draft.items;
-    // InvoiceBuilder line 408:
+    const rawItems = draft.items;
+    // Remediated InvoiceBuilder / computeInvoiceSummary sanitization:
+    const items = Array.isArray(rawItems) ? rawItems.filter((i: any) => Boolean(i && typeof i === 'object')) : [];
     const subtotal = items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
   } catch (err) {
     caughtError = err;

@@ -260,6 +260,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   // --- DISCOUNT & TAX STATE ---
   const [includeDiscount, setIncludeDiscount] = useState<boolean>(false);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const [includeCustomDiscount, setIncludeCustomDiscount] = useState<boolean>(false);
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
   const [includeTax, setIncludeTax] = useState<boolean>(false);
@@ -280,6 +281,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       setExplanation(inv.explanation || '');
       setItems(inv.items ? JSON.parse(JSON.stringify(inv.items)) : []);
       setIncludeDiscount(Boolean(inv.includeDiscount));
+      setDiscountPercentage(inv.discountPercentage || 0);
       setIncludeCustomDiscount(Boolean(inv.includeCustomDiscount));
       setCustomDiscountAmount(inv.customDiscountAmount || 0);
       setIncludeTax(Boolean(inv.includeTax));
@@ -292,21 +294,41 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     } else {
       // Check for saved draft in localStorage
       const draft = StorageService.getDraft();
-      if (draft && ((draft.items && draft.items.length > 0) || (draft.customerName && draft.customerName.trim().length > 0) || draft.invoiceNumber)) {
-        if (draft.invoiceNumber) setInvoiceNumber(draft.invoiceNumber);
-        if (draft.jalaliDate) setJalaliDate(draft.jalaliDate);
-        if (draft.customerName) setCustomerName(draft.customerName);
-        if (draft.customerPhone) setCustomerPhone(draft.customerPhone);
-        if (draft.customerAddress) setCustomerAddress(draft.customerAddress);
-        if (draft.explanation !== undefined) setExplanation(draft.explanation);
-        if (draft.items && Array.isArray(draft.items)) setItems(draft.items);
-        if (draft.includeDiscount !== undefined) setIncludeDiscount(draft.includeDiscount);
-        if (draft.includeCustomDiscount !== undefined) setIncludeCustomDiscount(draft.includeCustomDiscount);
-        if (draft.customDiscountAmount !== undefined) setCustomDiscountAmount(draft.customDiscountAmount);
-        if (draft.includeTax !== undefined) setIncludeTax(draft.includeTax);
-        notify('پیش‌نویس ذخیره‌شده فاکتور بازیابی گردید.');
+      if (draft && typeof draft === 'object') {
+        const validCustomerName = typeof draft.customerName === 'string' ? draft.customerName : '';
+        const validInvoiceNumber =
+          typeof draft.invoiceNumber === 'string' || typeof draft.invoiceNumber === 'number'
+            ? String(draft.invoiceNumber)
+            : '';
+        const hasItems = Array.isArray(draft.items) && draft.items.length > 0;
+        const hasCustomerName = validCustomerName.trim().length > 0;
+        const hasInvoiceNumber = validInvoiceNumber.trim().length > 0;
+
+        if (hasItems || hasCustomerName || hasInvoiceNumber) {
+          if (validInvoiceNumber) setInvoiceNumber(validInvoiceNumber);
+          if (typeof draft.jalaliDate === 'string' && draft.jalaliDate) setJalaliDate(draft.jalaliDate);
+          if (validCustomerName) setCustomerName(validCustomerName);
+          if (typeof draft.customerPhone === 'string') setCustomerPhone(draft.customerPhone);
+          if (typeof draft.customerAddress === 'string') setCustomerAddress(draft.customerAddress);
+          if (typeof draft.explanation === 'string') setExplanation(draft.explanation);
+          if (Array.isArray(draft.items)) {
+            const sanitizedItems = draft.items.filter((item): item is InvoiceItem => Boolean(item && typeof item === 'object' && item.type));
+            setItems(sanitizedItems);
+          }
+          if (typeof draft.includeDiscount === 'boolean') setIncludeDiscount(draft.includeDiscount);
+          if (typeof draft.discountPercentage === 'number') setDiscountPercentage(draft.discountPercentage);
+          if (typeof draft.includeCustomDiscount === 'boolean') setIncludeCustomDiscount(draft.includeCustomDiscount);
+          if (typeof draft.customDiscountAmount === 'number') setCustomDiscountAmount(draft.customDiscountAmount);
+          if (typeof draft.includeTax === 'boolean') setIncludeTax(draft.includeTax);
+          notify('پیش‌نویس ذخیره‌شده فاکتور بازیابی گردید.');
+        } else {
+          const freshSettings = StorageService.getSettings();
+          const nextNum = (freshSettings.invoiceCounter || settings.invoiceCounter || 1) + 1;
+          setInvoiceNumber(String(nextNum));
+        }
       } else {
-        const nextNum = (settings.invoiceCounter || 1) + 1;
+        const freshSettings = StorageService.getSettings();
+        const nextNum = (freshSettings.invoiceCounter || settings.invoiceCounter || 1) + 1;
         setInvoiceNumber(String(nextNum));
       }
       setIsHydrated(true);
@@ -321,10 +343,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
     const hasData =
       items.length > 0 ||
-      customerName.trim().length > 0 ||
-      customerPhone.trim().length > 0 ||
-      customerAddress.trim().length > 0 ||
-      explanation.trim().length > 0;
+      (typeof customerName === 'string' && customerName.trim().length > 0) ||
+      (typeof customerPhone === 'string' && customerPhone.trim().length > 0) ||
+      (typeof customerAddress === 'string' && customerAddress.trim().length > 0) ||
+      (typeof explanation === 'string' && explanation.trim().length > 0);
 
     if (hasData) {
       StorageService.saveDraft({
@@ -336,6 +358,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         explanation,
         items,
         includeDiscount,
+        discountPercentage,
         includeCustomDiscount,
         customDiscountAmount,
         includeTax,
@@ -353,6 +376,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     customerAddress,
     explanation,
     includeDiscount,
+    discountPercentage,
     includeCustomDiscount,
     customDiscountAmount,
     includeTax,
@@ -363,6 +387,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
   // Inline edit for pipe item: length and pricePerKg
   const handleUpdatePipeItem = (id: string, newLength: number, newPricePerKg: number) => {
+    const len = Math.max(0, Number(newLength) || 0);
+    const price = Math.max(0, Number(newPricePerKg) || 0);
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === id && item.type === 'pipe') {
@@ -372,8 +398,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               diameter: item.diameter,
               sdr: item.sdr,
               pn: item.pn,
-              length: newLength,
-              pricePerKg: newPricePerKg,
+              length: len,
+              pricePerKg: price,
             },
             weightTable,
             item.id
@@ -405,14 +431,18 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   };
 
   // Calculate live summary
-  const subtotalBeforeDiscounts = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  const subtotalBeforeDiscounts = items.reduce(
+    (sum, item) => sum + (item && item.totalPrice ? item.totalPrice : 0),
+    0
+  );
   const autoDiscountPct = getApplicableDiscount(subtotalBeforeDiscounts, discounts);
+  const effectiveDiscountPct = discountPercentage > 0 ? discountPercentage : autoDiscountPct;
 
   const summary = useMemo(() => {
     return computeInvoiceSummary({
       items,
       includeDiscount,
-      discountPercentage: autoDiscountPct,
+      discountPercentage: effectiveDiscountPct,
       includeCustomDiscount,
       customDiscountAmount,
       includeTax,
@@ -421,7 +451,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   }, [
     items,
     includeDiscount,
-    autoDiscountPct,
+    effectiveDiscountPct,
     includeCustomDiscount,
     customDiscountAmount,
     includeTax,
@@ -439,23 +469,29 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const handleCustomerNameChange = (name: string) => {
     setCustomerName(name);
     const matched = customers.find(
-      (c) => c.name.trim().toLowerCase() === name.trim().toLowerCase()
+      (c) => c && c.name && typeof c.name === 'string' && c.name.trim().toLowerCase() === name.trim().toLowerCase()
     );
     if (matched) {
-      if (matched.phone) setCustomerPhone(matched.phone);
-      if (matched.address) setCustomerAddress(matched.address);
+      setCustomerPhone(matched.phone || '');
+      setCustomerAddress(matched.address || '');
       if (matched.defaultDiscount && matched.defaultDiscount > 0) {
-        setIncludeCustomDiscount(true);
-        setIncludeDiscount(false);
         if (matched.defaultDiscount <= 100) {
-          const discountVal = Math.round((subtotalBeforeDiscounts * matched.defaultDiscount) / 100);
-          setCustomDiscountAmount(discountVal);
+          setIncludeDiscount(true);
+          setDiscountPercentage(matched.defaultDiscount);
+          setIncludeCustomDiscount(false);
+          setCustomDiscountAmount(0);
           notify(`اطلاعات و درصد تخفیف ${toPersianDigits(matched.defaultDiscount)}٪ مشتری اعمال شد.`);
         } else {
+          setIncludeCustomDiscount(true);
           setCustomDiscountAmount(matched.defaultDiscount);
+          setIncludeDiscount(false);
+          setDiscountPercentage(0);
           notify(`اطلاعات و تخفیف ${formatNumber(matched.defaultDiscount)} ${activeCurrency} مشتری اعمال شد.`);
         }
       } else {
+        setDiscountPercentage(0);
+        setIncludeCustomDiscount(false);
+        setCustomDiscountAmount(0);
         notify('اطلاعات مشتری (تلفن و نشانی) بارگذاری شد.');
       }
     }
@@ -537,12 +573,14 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     setCustomerPhone('');
     setCustomerAddress('');
     setIncludeDiscount(false);
+    setDiscountPercentage(0);
     setIncludeCustomDiscount(false);
     setCustomDiscountAmount(0);
     setIncludeTax(false);
     StorageService.clearDraft();
     onClearEditingSession?.();
-    const nextNum = (settings.invoiceCounter || 1) + 1;
+    const freshSettings = StorageService.getSettings();
+    const nextNum = (freshSettings.invoiceCounter || settings.invoiceCounter || 1) + 1;
     setInvoiceNumber(String(nextNum));
     setJalaliDate(getCurrentJalaliDate());
     notify('پیش‌فاکتور جدید آماده گردید.');
@@ -568,7 +606,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       items,
       subtotal: summary.subtotal,
       includeDiscount,
-      discountPercentage: autoDiscountPct,
+      discountPercentage: effectiveDiscountPct,
       discountAmount: summary.discountAmount,
       includeCustomDiscount,
       customDiscountAmount,
@@ -1308,7 +1346,11 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     }}
                     className="rounded text-blue-600 focus:ring-0"
                   />
-                  <span>تخفیف پله‌ای خودکار ({autoDiscountPct}%):</span>
+                  <span>
+                    {discountPercentage > 0
+                      ? `تخفیف مشتری (${toPersianDigits(discountPercentage)}٪):`
+                      : `تخفیف پله‌ای خودکار (${toPersianDigits(autoDiscountPct)}٪):`}
+                  </span>
                 </span>
                 {includeDiscount && (
                   <span className="font-mono text-emerald-400 text-xs font-bold">
