@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -8,6 +8,9 @@ import {
   Layers,
   CheckCircle,
   FileCheck,
+  Edit3,
+  Copy,
+  RotateCcw,
 } from 'lucide-react';
 import {
   CompanySettings,
@@ -44,6 +47,8 @@ interface InvoiceBuilderProps {
   customers: Customer[];
   weightTable: WeightTable;
   gradeSdrPn: GradeSdrPn;
+  editingSession?: { invoice: Invoice; isDuplicate: boolean } | null;
+  onClearEditingSession?: () => void;
   onPreviewPrint: (invoice: Invoice) => void;
   onInvoiceSaved?: () => void;
 }
@@ -55,9 +60,20 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   customers,
   weightTable,
   gradeSdrPn,
+  editingSession,
+  onClearEditingSession,
   onPreviewPrint,
   onInvoiceSaved,
 }) => {
+  // Active currency unit: from editing session if editing, or current settings
+  const activeCurrency = editingSession?.invoice?.currencyUnit || settings.currencyUnit || 'تومان';
+
+  // Base pipe price helper: settings store basePipePrices in Toman. In Rial, multiply by 10.
+  const getBasePipePriceForGrade = (grade: PipeGrade, currency: 'تومان' | 'ریال') => {
+    const baseToman = settings?.basePipePrices?.[grade] || (grade === 'PE100' ? 95000 : grade === 'PE80' ? 88000 : 82000);
+    return currency === 'ریال' ? baseToman * 10 : baseToman;
+  };
+
   // Invoice Metadata
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [jalaliDate, setJalaliDate] = useState<string>(getCurrentJalaliDate());
@@ -84,7 +100,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [pipeSdr, setPipeSdr] = useState<number>(11);
   const [pipePn, setPipePn] = useState<number>(16);
   const [pipeLength, setPipeLength] = useState<number>(100);
-  const [pipePricePerKg, setPipePricePerKg] = useState<number>(() => settings?.basePipePrices?.PE100 || 95000);
+  const [pipePricePerKg, setPipePricePerKg] = useState<number>(() =>
+    getBasePipePriceForGrade('PE100', activeCurrency)
+  );
 
   // Available SDRs for selected diameter
   const availableSdrs = useMemo(() => {
@@ -103,12 +121,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     }
   }, [pipeGrade, pipeSdr, gradeSdrPn]);
 
-  // Update default price when grade changes
+  // Update default price when grade or active currency changes
   useEffect(() => {
-    if (settings?.basePipePrices?.[pipeGrade]) {
-      setPipePricePerKg(settings.basePipePrices[pipeGrade]);
-    }
-  }, [pipeGrade, settings?.basePipePrices]);
+    setPipePricePerKg(getBasePipePriceForGrade(pipeGrade, activeCurrency));
+  }, [pipeGrade, activeCurrency, settings?.basePipePrices]);
 
   // Compute live pipe weight per meter
   const currentWpm = useMemo(() => {
@@ -205,17 +221,17 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     );
   }, [activeFittings, fittingCategory, fittingType, fittingProduct, fittingPressure, fittingSize]);
 
-  // Update unit price when matched fitting changes
+  // Update unit price when matched fitting changes or active currency changes
   useEffect(() => {
     if (selectedFittingCatalog) {
       // In Toman or Rial
       const price =
-        settings.currencyUnit === 'تومان'
+        activeCurrency === 'تومان'
           ? Math.round(selectedFittingCatalog.unitPriceRial / 10)
           : selectedFittingCatalog.unitPriceRial;
       setFittingUnitPrice(price);
     }
-  }, [selectedFittingCatalog, settings.currencyUnit]);
+  }, [selectedFittingCatalog, activeCurrency]);
 
   // Reset cascading selections when parent changes
   useEffect(() => {
@@ -249,11 +265,144 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [includeTax, setIncludeTax] = useState<boolean>(false);
   const [taxPercentage] = useState<number>(settings.taxRate || 10);
 
-  // Initialize Invoice Number from settings
+  // Hydration tracking
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Restore draft or load editingSession
   useEffect(() => {
-    const nextNum = (settings.invoiceCounter || 3) + 1;
-    setInvoiceNumber(String(nextNum));
-  }, [settings.invoiceCounter]);
+    if (editingSession) {
+      const inv = editingSession.invoice;
+      setInvoiceNumber(inv.invoiceNumber);
+      setJalaliDate(editingSession.isDuplicate ? getCurrentJalaliDate() : (inv.jalaliDate || getCurrentJalaliDate()));
+      setCustomerName(inv.customerName || '');
+      setCustomerPhone(inv.customerPhone || '');
+      setCustomerAddress(inv.customerAddress || '');
+      setExplanation(inv.explanation || '');
+      setItems(inv.items ? JSON.parse(JSON.stringify(inv.items)) : []);
+      setIncludeDiscount(Boolean(inv.includeDiscount));
+      setIncludeCustomDiscount(Boolean(inv.includeCustomDiscount));
+      setCustomDiscountAmount(inv.customDiscountAmount || 0);
+      setIncludeTax(Boolean(inv.includeTax));
+      setIsHydrated(true);
+      if (editingSession.isDuplicate) {
+        notify(`فاکتور شماره ${inv.invoiceNumber} به عنوان پیش‌فاکتور جدید تکثیر گردید.`);
+      } else {
+        notify(`فاکتور شماره ${inv.invoiceNumber} جهت ویرایش بارگذاری شد.`);
+      }
+    } else {
+      // Check for saved draft in localStorage
+      const draft = StorageService.getDraft();
+      if (draft && ((draft.items && draft.items.length > 0) || (draft.customerName && draft.customerName.trim().length > 0) || draft.invoiceNumber)) {
+        if (draft.invoiceNumber) setInvoiceNumber(draft.invoiceNumber);
+        if (draft.jalaliDate) setJalaliDate(draft.jalaliDate);
+        if (draft.customerName) setCustomerName(draft.customerName);
+        if (draft.customerPhone) setCustomerPhone(draft.customerPhone);
+        if (draft.customerAddress) setCustomerAddress(draft.customerAddress);
+        if (draft.explanation !== undefined) setExplanation(draft.explanation);
+        if (draft.items && Array.isArray(draft.items)) setItems(draft.items);
+        if (draft.includeDiscount !== undefined) setIncludeDiscount(draft.includeDiscount);
+        if (draft.includeCustomDiscount !== undefined) setIncludeCustomDiscount(draft.includeCustomDiscount);
+        if (draft.customDiscountAmount !== undefined) setCustomDiscountAmount(draft.customDiscountAmount);
+        if (draft.includeTax !== undefined) setIncludeTax(draft.includeTax);
+        notify('پیش‌نویس ذخیره‌شده فاکتور بازیابی گردید.');
+      } else {
+        const nextNum = (settings.invoiceCounter || 1) + 1;
+        setInvoiceNumber(String(nextNum));
+      }
+      setIsHydrated(true);
+    }
+  }, [editingSession]);
+
+  // Real-time draft auto-save
+  useEffect(() => {
+    if (!isHydrated) return;
+    // Do not overwrite draft if editing an existing invoice
+    if (editingSession && !editingSession.isDuplicate) return;
+
+    const hasData =
+      items.length > 0 ||
+      customerName.trim().length > 0 ||
+      customerPhone.trim().length > 0 ||
+      customerAddress.trim().length > 0 ||
+      explanation.trim().length > 0;
+
+    if (hasData) {
+      StorageService.saveDraft({
+        invoiceNumber,
+        jalaliDate,
+        customerName,
+        customerPhone,
+        customerAddress,
+        explanation,
+        items,
+        includeDiscount,
+        includeCustomDiscount,
+        customDiscountAmount,
+        includeTax,
+        currencyUnit: activeCurrency,
+      });
+    } else {
+      StorageService.clearDraft();
+    }
+  }, [
+    isHydrated,
+    editingSession,
+    items,
+    customerName,
+    customerPhone,
+    customerAddress,
+    explanation,
+    includeDiscount,
+    includeCustomDiscount,
+    customDiscountAmount,
+    includeTax,
+    invoiceNumber,
+    jalaliDate,
+    activeCurrency,
+  ]);
+
+  // Inline edit for pipe item: length and pricePerKg
+  const handleUpdatePipeItem = (id: string, newLength: number, newPricePerKg: number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id && item.type === 'pipe') {
+          const updated = computePipeItem(
+            {
+              peGrade: item.peGrade,
+              diameter: item.diameter,
+              sdr: item.sdr,
+              pn: item.pn,
+              length: newLength,
+              pricePerKg: newPricePerKg,
+            },
+            weightTable,
+            item.id
+          );
+          return updated || item;
+        }
+        return item;
+      })
+    );
+  };
+
+  // Inline edit for fitting item: quantity and unitPrice
+  const handleUpdateFittingItem = (id: string, newQuantity: number, newUnitPrice: number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id && item.type === 'fitting') {
+          const qty = Math.max(0, newQuantity);
+          const price = Math.max(0, newUnitPrice);
+          return {
+            ...item,
+            quantity: qty,
+            unitPrice: price,
+            totalPrice: Math.round(qty * price),
+          };
+        }
+        return item;
+      })
+    );
+  };
 
   // Calculate live summary
   const subtotalBeforeDiscounts = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
@@ -284,6 +433,32 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const notify = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Customer selection & autofill
+  const handleCustomerNameChange = (name: string) => {
+    setCustomerName(name);
+    const matched = customers.find(
+      (c) => c.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (matched) {
+      if (matched.phone) setCustomerPhone(matched.phone);
+      if (matched.address) setCustomerAddress(matched.address);
+      if (matched.defaultDiscount && matched.defaultDiscount > 0) {
+        setIncludeCustomDiscount(true);
+        setIncludeDiscount(false);
+        if (matched.defaultDiscount <= 100) {
+          const discountVal = Math.round((subtotalBeforeDiscounts * matched.defaultDiscount) / 100);
+          setCustomDiscountAmount(discountVal);
+          notify(`اطلاعات و درصد تخفیف ${toPersianDigits(matched.defaultDiscount)}٪ مشتری اعمال شد.`);
+        } else {
+          setCustomDiscountAmount(matched.defaultDiscount);
+          notify(`اطلاعات و تخفیف ${formatNumber(matched.defaultDiscount)} ${activeCurrency} مشتری اعمال شد.`);
+        }
+      } else {
+        notify('اطلاعات مشتری (تلفن و نشانی) بارگذاری شد.');
+      }
+    }
   };
 
   // Add Pipe Item handler
@@ -354,18 +529,37 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     setItems(items.filter((i) => i.id !== id));
   };
 
-  // Clear all
+  // Clear / Reset all
+  const resetToNewDraft = () => {
+    setItems([]);
+    setExplanation('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+    setIncludeDiscount(false);
+    setIncludeCustomDiscount(false);
+    setCustomDiscountAmount(0);
+    setIncludeTax(false);
+    StorageService.clearDraft();
+    onClearEditingSession?.();
+    const nextNum = (settings.invoiceCounter || 1) + 1;
+    setInvoiceNumber(String(nextNum));
+    setJalaliDate(getCurrentJalaliDate());
+    notify('پیش‌فاکتور جدید آماده گردید.');
+  };
+
   const handleClearAll = () => {
-    if (items.length > 0 && confirm('آیا از پاک کردن تمام اقلام پیش‌فاکتور اطمینان دارید؟')) {
-      setItems([]);
-      setExplanation('');
+    if (items.length > 0 && confirm('آیا از پاک کردن تمام اقلام و شروع فاکتور جدید اطمینان دارید؟')) {
+      resetToNewDraft();
     }
   };
 
   // Construct current invoice object
   const buildCurrentInvoice = (status: 'draft' | 'finalized' = 'finalized'): Invoice => {
+    const isEditMode = Boolean(editingSession && !editingSession.isDuplicate);
+    const invoiceId = isEditMode && editingSession?.invoice.id ? editingSession.invoice.id : 'inv_' + Date.now();
     return {
-      id: 'inv_' + Date.now(),
+      id: invoiceId,
       invoiceNumber: invoiceNumber.trim() || '1',
       customerName: customerName.trim() || 'مشتری آزاد',
       customerPhone: customerPhone.trim(),
@@ -383,8 +577,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       taxAmount: summary.taxAmount,
       totalAmount: summary.totalAmount,
       explanation,
+      currencyUnit: activeCurrency,
       status,
-      createdAt: new Date().toISOString(),
+      createdAt: isEditMode && editingSession?.invoice.createdAt ? editingSession.invoice.createdAt : new Date().toISOString(),
     };
   };
 
@@ -395,8 +590,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       return;
     }
 
+    const isEditMode = Boolean(editingSession && !editingSession.isDuplicate);
     const inv = buildCurrentInvoice('finalized');
     StorageService.saveInvoice(inv);
+    StorageService.clearDraft();
 
     // Save customer if name provided
     if (customerName.trim()) {
@@ -408,17 +605,23 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       });
     }
 
-    // Increment invoice counter
-    const currentNum = Number(invoiceNumber) || 1;
-    if (currentNum >= (settings.invoiceCounter || 0)) {
-      const updatedSettings = {
-        ...settings,
-        invoiceCounter: currentNum,
-      };
-      StorageService.saveSettings(updatedSettings);
+    // Increment invoice counter only if NEW invoice (not editing)
+    if (!isEditMode) {
+      const currentNum = Number(invoiceNumber) || 1;
+      if (currentNum >= (settings.invoiceCounter || 0)) {
+        const updatedSettings = {
+          ...settings,
+          invoiceCounter: currentNum,
+        };
+        StorageService.saveSettings(updatedSettings);
+      }
     }
 
-    notify(`پیش‌فاکتور شماره ${invoiceNumber} در سوابق ذخیره شد.`);
+    notify(
+      isEditMode
+        ? `پیش‌فاکتور شماره ${invoiceNumber} با موفقیت ویرایش و بروزرسانی شد.`
+        : `پیش‌فاکتور شماره ${invoiceNumber} در سوابق ذخیره شد.`
+    );
     onInvoiceSaved?.();
   };
 
@@ -439,6 +642,68 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         <div className="fixed bottom-6 left-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-fade-in">
           <CheckCircle className="w-5 h-5" />
           <span>{notification}</span>
+        </div>
+      )}
+
+      {/* Edit Mode Banner */}
+      {editingSession && !editingSession.isDuplicate && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400">
+              <Edit3 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-amber-300 text-base">
+                  حالت ویرایش فاکتور شماره {toPersianDigits(editingSession.invoice.invoiceNumber)}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
+                  {editingSession.invoice.id}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                تغییرات شما به صورت مستقیم روی این فاکتور در سوابق ذخیره و بروزرسانی می‌شود.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={resetToNewDraft}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>انصراف از ویرایش / ایجاد فاکتور جدید</span>
+          </button>
+        </div>
+      )}
+
+      {/* Duplicate Mode Banner */}
+      {editingSession && editingSession.isDuplicate && (
+        <div className="bg-indigo-500/10 border-2 border-indigo-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-500/20 rounded-xl text-indigo-400">
+              <Copy className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-indigo-300 text-base">
+                  تکثیر از فاکتور شماره {toPersianDigits(editingSession.invoice.invoiceNumber)}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">
+                  پیش‌فاکتور جدید
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                اقلام با موفقیت بارگذاری شدند. فاکتور تحت شماره جدید {toPersianDigits(invoiceNumber)} صادر خواهد شد.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={resetToNewDraft}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>پاکسازی و شروع فاکتور خالی</span>
+          </button>
         </div>
       )}
 
@@ -480,7 +745,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <input
                 type="text"
                 value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+                onChange={(e) => handleCustomerNameChange(e.target.value)}
                 placeholder="مثال: آقای رضایی / شرکت آب و خاک"
                 list="customers-list"
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
@@ -626,7 +891,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               {/* Price per Kg */}
               <div>
                 <label className="block text-xs text-slate-400 mb-1">
-                  قیمت هر کیلوگرم ({settings.currencyUnit}):
+                  قیمت هر کیلوگرم ({activeCurrency}):
                 </label>
                 <input
                   type="number"
@@ -657,7 +922,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <div>
                   <span className="text-slate-400 block">قیمت کل این ردیف:</span>
                   <strong className="text-emerald-400 text-base font-bold font-mono">
-                    {formatPrice(currentPipeTotalPrice, settings.currencyUnit)}
+                    {formatPrice(currentPipeTotalPrice, activeCurrency)}
                   </strong>
                 </div>
               </div>
@@ -782,7 +1047,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 </div>
 
                 <div>
-                  <span className="text-slate-400 block">قیمت واحد ({settings.currencyUnit}):</span>
+                  <span className="text-slate-400 block">قیمت واحد ({activeCurrency}):</span>
                   <input
                     type="number"
                     value={fittingUnitPrice}
@@ -794,7 +1059,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <div>
                   <span className="text-slate-400 block">قیمت کل این اتصال:</span>
                   <strong className="text-emerald-400 text-base font-bold font-mono">
-                    {formatPrice(fittingQuantity * fittingUnitPrice, settings.currencyUnit)}
+                    {formatPrice(fittingQuantity * fittingUnitPrice, activeCurrency)}
                   </strong>
                 </div>
               </div>
@@ -842,8 +1107,8 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <th className="py-3 px-4">شرح کالا و مشخصات فنی</th>
                 <th className="py-3 px-4 text-center">مقدار / طول / تعداد</th>
                 <th className="py-3 px-4 text-center">وزن واحد / کل (kg)</th>
-                <th className="py-3 px-4 text-center">قیمت واحد ({settings.currencyUnit})</th>
-                <th className="py-3 px-4 text-center">قیمت کل ({settings.currencyUnit})</th>
+                <th className="py-3 px-4 text-center">قیمت واحد ({activeCurrency})</th>
+                <th className="py-3 px-4 text-center">قیمت کل ({activeCurrency})</th>
                 <th className="py-3 px-4 text-center">حذف</th>
               </tr>
             </thead>
@@ -890,14 +1155,46 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-center font-mono font-medium text-slate-200">
-                        {isPipe ? `${formatNumber(item.length)} متر` : `${formatNumber(item.quantity)} عدد`}
+                      <td className="py-3 px-3 text-center">
+                        {isPipe ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="any"
+                              value={item.length}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                handleUpdatePipeItem(item.id, val, item.pricePerKg);
+                              }}
+                              className="w-24 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                              title="ویرایش آنلاین متراژ لوله (متر)"
+                            />
+                            <span className="text-xs text-slate-400">متر</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10) || 0;
+                                handleUpdateFittingItem(item.id, val, item.unitPrice);
+                              }}
+                              className="w-20 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                              title="ویرایش آنلاین تعداد اتصالات (عدد)"
+                            />
+                            <span className="text-xs text-slate-400">عدد</span>
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 px-4 text-center font-mono text-xs text-slate-300">
                         {isPipe ? (
                           <div>
-                            <div>{item.totalWeight} kg</div>
+                            <div className="font-bold text-white">{item.totalWeight} kg</div>
                             <div className="text-[10px] text-slate-500">({item.weightPerMeter} kg/m)</div>
                           </div>
                         ) : (
@@ -905,8 +1202,38 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-center font-mono text-slate-300">
-                        {isPipe ? formatNumber(item.pricePerKg) : formatNumber(item.unitPrice)}
+                      <td className="py-3 px-3 text-center">
+                        {isPipe ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              step="100"
+                              value={item.pricePerKg}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                handleUpdatePipeItem(item.id, item.length, val);
+                              }}
+                              className="w-28 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                              title={`ویرایش آنلاین قیمت هر کیلوگرم (${activeCurrency})`}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={item.unitPrice}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                handleUpdateFittingItem(item.id, item.quantity, val);
+                              }}
+                              className="w-28 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                              title={`ویرایش آنلاین قیمت واحد اتصال (${activeCurrency})`}
+                            />
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 px-4 text-center font-mono font-bold text-emerald-400">
@@ -948,7 +1275,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 text-xs space-y-1">
               <span className="text-slate-400 block font-medium">مبلغ نهایی فاکتور به حروف:</span>
               <strong className="text-blue-300 text-sm block">
-                {numberToPersianWords(summary.totalAmount)} {settings.currencyUnit}
+                {numberToPersianWords(summary.totalAmount)} {activeCurrency}
               </strong>
             </div>
           )}
@@ -958,7 +1285,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 space-y-4 shadow-xl">
           <h4 className="font-bold text-white border-b border-slate-700 pb-3 flex items-center justify-between">
             <span>محاسبات نهایی مالی</span>
-            <span className="text-xs text-slate-400">واحد: {settings.currencyUnit}</span>
+            <span className="text-xs text-slate-400">واحد: {activeCurrency}</span>
           </h4>
 
           <div className="space-y-3 text-sm">
@@ -1010,7 +1337,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <div className="relative pl-2">
                   <input
                     type="number"
-                    placeholder="مبلغ تخفیف به تومان"
+                    placeholder={`مبلغ تخفیف به ${activeCurrency}`}
                     value={customDiscountAmount || ''}
                     onChange={(e) => setCustomDiscountAmount(Number(e.target.value) || 0)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono text-left focus:outline-none"
@@ -1065,7 +1392,11 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 rounded-xl font-medium transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>ذخیره در سوابق فاکتورها</span>
+              <span>
+                {editingSession && !editingSession.isDuplicate
+                  ? 'بروزرسانی و ثبت تغییرات فاکتور'
+                  : 'ذخیره در سوابق فاکتورها'}
+              </span>
             </button>
           </div>
         </div>
