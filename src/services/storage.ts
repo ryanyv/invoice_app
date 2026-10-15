@@ -23,6 +23,7 @@ const KEYS = {
   INVOICES: 'pipecal_invoices_v2',
   WEIGHT_TABLE: 'pipecal_weight_table_v2',
   GRADE_SDR_PN: 'pipecal_grade_sdr_pn_v2',
+  DRAFT: 'pipecal_draft_invoice_v2',
 };
 
 export class StorageService {
@@ -196,6 +197,28 @@ export class StorageService {
   static deleteInvoice(id: string): void {
     const list = this.getInvoices().filter((i) => i.id !== id);
     this.saveInvoices(list);
+  }
+
+  // --- Real-Time Draft Auto-Save ---
+  static getDraft(): Partial<Invoice> | null {
+    try {
+      const data = localStorage.getItem(KEYS.DRAFT);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static saveDraft(draft: Partial<Invoice>): void {
+    try {
+      localStorage.setItem(KEYS.DRAFT, JSON.stringify(draft));
+    } catch (e) {
+      console.error('Failed to save draft invoice', e);
+    }
+  }
+
+  static clearDraft(): void {
+    localStorage.removeItem(KEYS.DRAFT);
   }
 
   // --- Export & Backup ---

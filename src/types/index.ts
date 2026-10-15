@@ -50,6 +50,8 @@ export interface Customer {
   phone?: string;
   address?: string;
   nationalId?: string;
+  economicCode?: string;
+  postalCode?: string;
   defaultDiscount?: number;
 }
 
@@ -67,6 +69,13 @@ export interface CompanySettings {
   invoiceCounter: number;
   currencyUnit: 'تومان' | 'ریال';
   basePipePrices: Record<PipeGrade, number>;
+  economicCode?: string;
+  nationalId?: string;
+  registrationNumber?: string;
+  postalCode?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankIban?: string;
 }
 
 export interface Invoice {
@@ -75,6 +84,11 @@ export interface Invoice {
   customerName: string;
   customerPhone?: string;
   customerAddress?: string;
+  customerNationalId?: string;
+  customerEconomicCode?: string;
+  customerPostalCode?: string;
+  currencyUnit?: 'تومان' | 'ریال';
+  isOfficial?: boolean;
   jalaliDate: string;
   items: InvoiceItem[];
   subtotal: number;
