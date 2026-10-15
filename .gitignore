@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+dist-electron/
+release/
+
+# Operating System files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local environment
+.env
+.env.local
+.env.*.local

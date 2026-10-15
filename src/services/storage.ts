@@ -1,0 +1,265 @@
+import {
+  CompanySettings,
+  Customer,
+  DiscountRule,
+  FittingCatalogItem,
+  GradeSdrPn,
+  Invoice,
+  WeightTable,
+} from '../types';
+import {
+  initialCompanySettings,
+  initialDiscounts,
+  initialFittings,
+  initialGradeSdrPn,
+  initialWeightTable,
+} from '../data/initialData';
+
+const KEYS = {
+  FITTINGS: 'pipecal_fittings_v2',
+  SETTINGS: 'pipecal_settings_v2',
+  DISCOUNTS: 'pipecal_discounts_v2',
+  CUSTOMERS: 'pipecal_customers_v2',
+  INVOICES: 'pipecal_invoices_v2',
+  WEIGHT_TABLE: 'pipecal_weight_table_v2',
+  GRADE_SDR_PN: 'pipecal_grade_sdr_pn_v2',
+};
+
+export class StorageService {
+  // --- Fittings Catalog ---
+  static getFittings(): FittingCatalogItem[] {
+    try {
+      const data = localStorage.getItem(KEYS.FITTINGS);
+      return data ? JSON.parse(data) : initialFittings;
+    } catch {
+      return initialFittings;
+    }
+  }
+
+  static saveFittings(fittings: FittingCatalogItem[]): void {
+    localStorage.setItem(KEYS.FITTINGS, JSON.stringify(fittings));
+  }
+
+  static updateFittingPrice(id: string, newUnitPriceRial: number): void {
+    const fittings = this.getFittings();
+    const index = fittings.findIndex((f) => f.id === id);
+    if (index !== -1) {
+      fittings[index].unitPriceRial = newUnitPriceRial;
+      this.saveFittings(fittings);
+    }
+  }
+
+  static bulkUpdateFittingPrices(
+    filter: { category?: string; connectionType?: string; product?: string },
+    percentageDelta: number // e.g. +10 or -5
+  ): void {
+    const fittings = this.getFittings();
+    const factor = 1 + percentageDelta / 100;
+    const updated = fittings.map((f) => {
+      let match = true;
+      if (filter.category && f.category !== filter.category) match = false;
+      if (filter.connectionType && f.connectionType !== filter.connectionType) match = false;
+      if (filter.product && f.product !== filter.product) match = false;
+
+      if (match) {
+        return {
+          ...f,
+          unitPriceRial: Math.round(f.unitPriceRial * factor),
+        };
+      }
+      return f;
+    });
+    this.saveFittings(updated);
+  }
+
+  // --- Company Settings & Base Pipe Prices ---
+  static getSettings(): CompanySettings {
+    const fallbackPrices = {
+      PE100: 95000,
+      PE80: 88000,
+      PE63: 82000,
+    };
+    try {
+      const data = localStorage.getItem(KEYS.SETTINGS);
+      if (!data) return initialCompanySettings;
+      const parsed = JSON.parse(data);
+      const userPrices = parsed?.basePipePrices || {};
+      return {
+        ...initialCompanySettings,
+        ...parsed,
+        basePipePrices: {
+          PE100: Number(userPrices.PE100) || initialCompanySettings.basePipePrices?.PE100 || fallbackPrices.PE100,
+          PE80: Number(userPrices.PE80) || initialCompanySettings.basePipePrices?.PE80 || fallbackPrices.PE80,
+          PE63: Number(userPrices.PE63) || initialCompanySettings.basePipePrices?.PE63 || fallbackPrices.PE63,
+        },
+      };
+    } catch {
+      return initialCompanySettings;
+    }
+  }
+
+  static saveSettings(settings: CompanySettings): void {
+    localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+  }
+
+  static getNextInvoiceNumber(): string {
+    const settings = this.getSettings();
+    const nextNum = (settings.invoiceCounter || 1) + 1;
+    settings.invoiceCounter = nextNum;
+    this.saveSettings(settings);
+    return String(nextNum);
+  }
+
+  // --- Standards ---
+  static getWeightTable(): WeightTable {
+    try {
+      const data = localStorage.getItem(KEYS.WEIGHT_TABLE);
+      return data ? JSON.parse(data) : initialWeightTable;
+    } catch {
+      return initialWeightTable;
+    }
+  }
+
+  static getGradeSdrPn(): GradeSdrPn {
+    try {
+      const data = localStorage.getItem(KEYS.GRADE_SDR_PN);
+      return data ? JSON.parse(data) : initialGradeSdrPn;
+    } catch {
+      return initialGradeSdrPn;
+    }
+  }
+
+  // --- Discount Rules ---
+  static getDiscounts(): DiscountRule[] {
+    try {
+      const data = localStorage.getItem(KEYS.DISCOUNTS);
+      return data ? JSON.parse(data) : initialDiscounts;
+    } catch {
+      return initialDiscounts;
+    }
+  }
+
+  static saveDiscounts(discounts: DiscountRule[]): void {
+    localStorage.setItem(KEYS.DISCOUNTS, JSON.stringify(discounts));
+  }
+
+  // --- Customers ---
+  static getCustomers(): Customer[] {
+    try {
+      const data = localStorage.getItem(KEYS.CUSTOMERS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveCustomers(customers: Customer[]): void {
+    localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(customers));
+  }
+
+  static addOrUpdateCustomer(customer: Customer): void {
+    const list = this.getCustomers();
+    const idx = list.findIndex((c) => c.name.trim() === customer.name.trim());
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...customer };
+    } else {
+      list.push(customer);
+    }
+    this.saveCustomers(list);
+  }
+
+  // --- Invoices History ---
+  static getInvoices(): Invoice[] {
+    try {
+      const data = localStorage.getItem(KEYS.INVOICES);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveInvoices(invoices: Invoice[]): void {
+    localStorage.setItem(KEYS.INVOICES, JSON.stringify(invoices));
+  }
+
+  static saveInvoice(invoice: Invoice): void {
+    const list = this.getInvoices();
+    const idx = list.findIndex((i) => i.id === invoice.id || i.invoiceNumber === invoice.invoiceNumber);
+    if (idx !== -1) {
+      list[idx] = invoice;
+    } else {
+      list.unshift(invoice);
+    }
+    this.saveInvoices(list);
+  }
+
+  static deleteInvoice(id: string): void {
+    const list = this.getInvoices().filter((i) => i.id !== id);
+    this.saveInvoices(list);
+  }
+
+  // --- Export & Backup ---
+  static createFullBackup(): string {
+    const backup = {
+      version: '2.0.0',
+      exportedAt: new Date().toISOString(),
+      fittings: this.getFittings(),
+      settings: this.getSettings(),
+      discounts: this.getDiscounts(),
+      customers: this.getCustomers(),
+      invoices: this.getInvoices(),
+    };
+    return JSON.stringify(backup, null, 2);
+  }
+
+  static restoreFromBackup(jsonString: string): boolean {
+    try {
+      const data = JSON.parse(jsonString);
+      if (data.fittings) this.saveFittings(data.fittings);
+      if (data.settings) this.saveSettings(data.settings);
+      if (data.discounts) this.saveDiscounts(data.discounts);
+      if (data.customers) this.saveCustomers(data.customers);
+      if (data.invoices) this.saveInvoices(data.invoices);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- Export Fittings to CSV ---
+  static exportFittingsToCsv(): string {
+    const fittings = this.getFittings();
+    const headers = [
+      'شناسه',
+      'نوع',
+      'نوع محصول',
+      'محصول',
+      'جنس',
+      'فشار قابل تحمل',
+      'اندازه (mm)',
+      'قیمت واحد (ریال)',
+      'تعداد در کارتن',
+      'وضعیت فعال',
+    ];
+    const rows = fittings.map((f) => [
+      f.id,
+      `"${f.category}"`,
+      `"${f.connectionType}"`,
+      `"${f.product}"`,
+      `"${f.material}"`,
+      `"${f.pressure}"`,
+      `"${f.size}"`,
+      f.unitPriceRial,
+      f.packageCount,
+      f.isActive ? '1' : '0',
+    ]);
+    return '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  }
+
+  static resetToDefaults(): void {
+    localStorage.removeItem(KEYS.FITTINGS);
+    localStorage.removeItem(KEYS.SETTINGS);
+    localStorage.removeItem(KEYS.DISCOUNTS);
+  }
+}
+
