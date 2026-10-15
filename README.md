@@ -113,8 +113,8 @@ npm run electron:build:win
 
 ```text
 ├── electron/                 # کدهای اصلی Electron (main & preload process)
+├── public/                   # دارایی‌های عمومی و نشان‌واره (logo.png)
 ├── src/
-│   ├── assets/               # تصاویر، لوگو و داده‌های ثابت
 │   ├── components/
 │   │   ├── InvoiceBuilder/   # فرم ثبت و صدور پیش‌فاکتور
 │   │   ├── InvoiceHistory/   # سوابق و تاریخچه پیش‌فاکتورها
