@@ -32,6 +32,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
   const pipeItems = invoice.items.filter((i): i is PipeItem => i.type === 'pipe');
   const fittingItems = invoice.items.filter((i): i is FittingItem => i.type === 'fitting');
 
+  const currencyUnit = invoice.currencyUnit || settings.currencyUnit || 'تومان';
   const totalPipeWeight = pipeItems.reduce((acc, p) => acc + (p.totalWeight || 0), 0);
   const totalAmountWords = numberToPersianWords(invoice.totalAmount);
 
@@ -131,8 +132,8 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                   <th className="border border-slate-300 py-2 px-2">طول (متر)</th>
                   <th className="border border-slate-300 py-2 px-2">وزن/متر (kg)</th>
                   <th className="border border-slate-300 py-2 px-2">وزن کل (kg)</th>
-                  <th className="border border-slate-300 py-2 px-2">قیمت/kg ({settings.currencyUnit})</th>
-                  <th className="border border-slate-300 py-2 px-2">قیمت کل ({settings.currencyUnit})</th>
+                  <th className="border border-slate-300 py-2 px-2">قیمت/kg ({currencyUnit})</th>
+                  <th className="border border-slate-300 py-2 px-2">قیمت کل ({currencyUnit})</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,8 +171,8 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                   <th className="border border-slate-300 py-2 px-2">فشار (bar)</th>
                   <th className="border border-slate-300 py-2 px-2">سایز (mm)</th>
                   <th className="border border-slate-300 py-2 px-2">تعداد</th>
-                  <th className="border border-slate-300 py-2 px-2">قیمت واحد ({settings.currencyUnit})</th>
-                  <th className="border border-slate-300 py-2 px-2">قیمت کل ({settings.currencyUnit})</th>
+                  <th className="border border-slate-300 py-2 px-2">قیمت واحد ({currencyUnit})</th>
+                  <th className="border border-slate-300 py-2 px-2">قیمت کل ({currencyUnit})</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,7 +200,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
               <span className="font-bold text-blue-950 block mb-1">مبلغ کل قابل پرداخت به حروف:</span>
               <span className="text-blue-900 font-bold text-sm">
-                {totalAmountWords} {settings.currencyUnit}
+                {totalAmountWords} {currencyUnit}
               </span>
             </div>
 
@@ -224,7 +225,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <td className="py-2 px-3 text-slate-600">جمع کل ناخالص:</td>
                   <td className="py-2 px-3 text-left font-mono font-bold text-slate-800">
-                    {formatNumber(invoice.subtotal, true)} {settings.currencyUnit}
+                    {formatNumber(invoice.subtotal, true)} {currencyUnit}
                   </td>
                 </tr>
 
@@ -234,7 +235,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                       تخفیف ({invoice.includeCustomDiscount ? 'مبلغ دلخواه' : `${toPersianDigits(invoice.discountPercentage)}%`}):
                     </td>
                     <td className="py-2 px-3 text-left font-mono font-bold">
-                      - {formatNumber(invoice.discountAmount, true)} {settings.currencyUnit}
+                      - {formatNumber(invoice.discountAmount, true)} {currencyUnit}
                     </td>
                   </tr>
                 )}
@@ -245,7 +246,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                       مالیات بر ارزش افزوده ({toPersianDigits(invoice.taxPercentage)}%):
                     </td>
                     <td className="py-2 px-3 text-left font-mono font-bold">
-                      + {formatNumber(invoice.taxAmount, true)} {settings.currencyUnit}
+                      + {formatNumber(invoice.taxAmount, true)} {currencyUnit}
                     </td>
                   </tr>
                 )}
@@ -253,7 +254,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                 <tr className="bg-slate-900 text-white text-sm font-bold">
                   <td className="py-3 px-3">مبلغ نهایی فاکتور:</td>
                   <td className="py-3 px-3 text-left font-mono text-base text-yellow-300">
-                    {formatNumber(invoice.totalAmount, true)} {settings.currencyUnit}
+                    {formatNumber(invoice.totalAmount, true)} {currencyUnit}
                   </td>
                 </tr>
               </tbody>

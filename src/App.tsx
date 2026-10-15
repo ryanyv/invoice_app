@@ -6,6 +6,7 @@ import { InvoiceHistory } from './components/InvoiceHistory/InvoiceHistory';
 import { InvoicePrintView } from './components/InvoicePrint/InvoicePrintView';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { StorageService } from './services/storage';
+import { getCurrentJalaliDate } from './services/persianUtils';
 import {
   CompanySettings,
   Customer,
@@ -38,6 +39,30 @@ export const App: React.FC = () => {
   // Modals & Full views
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Active editing session: { invoice, isDuplicate }
+  const [editingSession, setEditingSession] = useState<{
+    invoice: Invoice;
+    isDuplicate: boolean;
+  } | null>(null);
+
+  const handleEditInvoice = (inv: Invoice) => {
+    setEditingSession({ invoice: inv, isDuplicate: false });
+    setActiveTab('builder');
+  };
+
+  const handleDuplicateInvoice = (inv: Invoice) => {
+    const nextInvoiceNum = StorageService.getNextInvoiceNumber();
+    const duplicated: Invoice = {
+      ...inv,
+      id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      invoiceNumber: nextInvoiceNum,
+      jalaliDate: getCurrentJalaliDate(),
+      createdAt: new Date().toISOString(),
+    };
+    setEditingSession({ invoice: duplicated, isDuplicate: true });
+    setActiveTab('builder');
+  };
 
   // Reload data after backup restore
   const handleRefreshAllData = () => {
@@ -79,8 +104,13 @@ export const App: React.FC = () => {
             customers={customers}
             weightTable={weightTable}
             gradeSdrPn={gradeSdrPn}
+            editingSession={editingSession}
+            onClearEditingSession={() => setEditingSession(null)}
             onPreviewPrint={(inv) => setPreviewInvoice(inv)}
-            onInvoiceSaved={() => setInvoices(StorageService.getInvoices())}
+            onInvoiceSaved={() => {
+              setInvoices(StorageService.getInvoices());
+              setEditingSession(null);
+            }}
           />
         )}
 
@@ -101,6 +131,8 @@ export const App: React.FC = () => {
             onUpdateInvoices={setInvoices}
             settings={settings}
             onPreviewPrint={(inv) => setPreviewInvoice(inv)}
+            onEditInvoice={handleEditInvoice}
+            onDuplicateInvoice={handleDuplicateInvoice}
           />
         )}
       </main>

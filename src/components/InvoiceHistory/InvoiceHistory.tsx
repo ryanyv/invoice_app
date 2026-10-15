@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Trash2, Printer, FileText } from 'lucide-react';
+import { Search, Trash2, Printer, FileText, Edit3, Copy } from 'lucide-react';
 import { CompanySettings, Invoice } from '../../types';
 import { formatNumber, toPersianDigits } from '../../services/persianUtils';
 import { StorageService } from '../../services/storage';
@@ -9,6 +9,8 @@ interface InvoiceHistoryProps {
   onUpdateInvoices: (invoices: Invoice[]) => void;
   settings: CompanySettings;
   onPreviewPrint: (invoice: Invoice) => void;
+  onEditInvoice?: (invoice: Invoice) => void;
+  onDuplicateInvoice?: (invoice: Invoice) => void;
 }
 
 export const InvoiceHistory: React.FC<InvoiceHistoryProps> = ({
@@ -16,6 +18,8 @@ export const InvoiceHistory: React.FC<InvoiceHistoryProps> = ({
   onUpdateInvoices,
   settings,
   onPreviewPrint,
+  onEditInvoice,
+  onDuplicateInvoice,
 }) => {
   const [search, setSearch] = useState('');
 
@@ -75,7 +79,7 @@ export const InvoiceHistory: React.FC<InvoiceHistoryProps> = ({
                 <th className="py-3.5 px-4">تاریخ صدور</th>
                 <th className="py-3.5 px-4">نام خریدار / مشتری</th>
                 <th className="py-3.5 px-4 text-center">تعداد اقلام</th>
-                <th className="py-3.5 px-4 text-center">مبلغ کل فاکتور ({settings.currencyUnit})</th>
+                <th className="py-3.5 px-4 text-center">مبلغ کل فاکتور</th>
                 <th className="py-3.5 px-4 text-center">عملیات</th>
               </tr>
             </thead>
@@ -105,13 +109,34 @@ export const InvoiceHistory: React.FC<InvoiceHistoryProps> = ({
                       {toPersianDigits(inv.items.length)} ردیف
                     </td>
                     <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-400">
-                      {formatNumber(inv.totalAmount)}
+                      {formatNumber(inv.totalAmount)}{' '}
+                      <span className="text-xs font-normal text-slate-400 font-sans">
+                        {inv.currencyUnit || settings.currencyUnit}
+                      </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => onEditInvoice?.(inv)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/30 text-xs font-medium transition-colors cursor-pointer"
+                          title="ویرایش پیش‌فاکتور در فرم سازنده"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>ویرایش</span>
+                        </button>
+
+                        <button
+                          onClick={() => onDuplicateInvoice?.(inv)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition-colors cursor-pointer"
+                          title="تکثیر این فاکتور با شماره جدید"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>تکثیر</span>
+                        </button>
+
                         <button
                           onClick={() => onPreviewPrint(inv)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 text-xs font-medium transition-colors cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 text-xs font-medium transition-colors cursor-pointer"
                           title="مشاهده و چاپ"
                         >
                           <Printer className="w-3.5 h-3.5" />
