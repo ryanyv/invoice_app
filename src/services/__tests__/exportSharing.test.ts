@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest';
 import { CompanySettings, Invoice, PipeItem, FittingItem } from '../../types';
 import {
   generateInvoiceCsvString,

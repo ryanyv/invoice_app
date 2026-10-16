@@ -1,4 +1,5 @@
 // Invoicing Workflow Verification Test Suite
+import { describe, it } from 'vitest';
 import { StorageService } from '../storage';
 import { computePipeItem, computeInvoiceSummary } from '../calculator';
 import { initialWeightTable } from '../../data/initialData';

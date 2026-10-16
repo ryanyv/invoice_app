@@ -10,6 +10,7 @@
  * 4. Rolling Backup Retention Stress: 50 sequential backup entries pruned strictly to 20 newest files
  */
 
+import { describe, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

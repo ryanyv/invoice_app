@@ -8,6 +8,7 @@
  * 3. Safe fallback & error resilience
  */
 
+import { describe, it } from 'vitest';
 import { StorageService } from '../storage';
 import {
   matchKeyboardShortcut,

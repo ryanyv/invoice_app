@@ -12,6 +12,7 @@
  * 4. Component level null-safety probe for InvoicePrintView
  */
 
+import { describe, it } from 'vitest';
 import { CompanySettings, Invoice, PipeItem, FittingItem } from '../../types';
 import {
   generateInvoiceCsvString,

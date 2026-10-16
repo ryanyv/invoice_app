@@ -1,5 +1,6 @@
 // Challenger M1 Empirical Stress Testing Harness
 // Adversarial verification of Requirement R1: Invoicing Workflow Enhancements
+import { describe, it } from 'vitest';
 import { StorageService } from '../storage';
 import {
   computePipeItem,

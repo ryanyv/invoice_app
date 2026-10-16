@@ -9,6 +9,7 @@
  * 4. Stress tests on edge cases: quotes, newlines, commas, zero values, extreme numbers, official vs simple proforma.
  */
 
+import { describe, it } from 'vitest';
 import { CompanySettings, Invoice, PipeItem, FittingItem } from '../../types';
 import {
   generateInvoiceCsvString,

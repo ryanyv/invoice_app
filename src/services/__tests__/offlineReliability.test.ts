@@ -11,6 +11,7 @@
  * 5. Safe Storage Dual-Layer Persistence & Backup JSON Serialization
  */
 
+import { describe, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import {
