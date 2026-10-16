@@ -12,7 +12,7 @@
     "electron:dev": "cross-env NODE_ENV=development concurrently -k \"vite\" \"electron .\"",
     "electron:pack": "npm run build && electron-builder --dir -c.mac.identity=null",
     "electron:build:mac": "npm run build && electron-builder --mac -c.mac.identity=null",
-    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:win": "npm run build && electron-builder --win --x64",
     "electron:build": "npm run build && electron-builder -c.mac.identity=null"
   },
   "build": {
