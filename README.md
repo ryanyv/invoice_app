@@ -3,37 +3,241 @@
 </p>
 
 # Pipecal Pro 2.0 🚀
+### Enterprise Desktop System for Polyethylene Pipes & Fittings Pricing, Quotation & Logistics
 ### سیستم جامع صدور پیش‌فاکتور و مدیریت قیمت لوله و اتصالات پلی‌اتیلن
-**Enterprise Desktop System for Polyethylene Pipes & Fittings Pricing, Quotation & Logistics**
 
 <p align="center">
   <a href="https://github.com/ryanyv/invoice_app/releases/latest"><img src="https://img.shields.io/badge/Release-v2.0.0-0284c7?style=flat-square&logo=github" alt="Latest Release" /></a>
-  <a href="#-تضمین-کیفیت-و-تست‌ها-testing--qa"><img src="https://img.shields.io/badge/Tests-208%20Passing-success?style=flat-square" alt="Tests" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.3-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-44.5-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 44" /></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS 4" /></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-8.3-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8" /></a>
+  <img src="https://img.shields.io/badge/Tests-208%20Passing-success?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/License-Proprietary%20%28Polygharb%29-amber?style=flat-square" alt="License" />
 </p>
 
----
-
-## 📑 فهرست مطالب (Table of Contents)
-- [📥 دانلود نرم‌افزار (Downloads)](#-دانلود-نرم‌افزار-downloads)
-- [🌟 امکانات و قابلیت‌ها (Key Features)](#-امکانات-و-قابلیت‌ها-key-features)
-- [⌨️ کلیدهای میانبر دسکتاپ (Keyboard Shortcuts)](#️-کلیدهای-میانبر-دسکتاپ-keyboard-shortcuts)
-- [💻 راهنمای نصب و راه‌اندازی (Installation Guide)](#-راهنمای-نصب-و-راه‌اندازی-installation-guide)
-- [🔒 اعتبارسنجی و هش فایل‌ها (Checksums)](#-اعتبارسنجی-و-هش-فایل‌ها-checksums)
-- [🛠️ راهنمای ساخت و توسعه (Development & Build)](#️-راهنمای-ساخت-و-توسعه-development--build)
-- [🧪 تضمین کیفیت و تست‌ها (Testing & QA)](#-تضمین-کیفیت-و-تست‌ها-testing--qa)
-- [📁 ساختار پروژه (Project Architecture)](#-ساختار-پروژه-project-architecture)
-- [📄 لایسنس و حقوق تجاری (License)](#-لایسنس-و-حقوق-تجاری-license)
+<p align="center">
+  <b>🌐 Language / زبان:</b>
+  <a href="#-english"><b>English</b></a> &nbsp;•&nbsp;
+  <a href="#-فارسی"><b>فارسی</b></a>
+</p>
 
 ---
 
-## 📥 دانلود نرم‌افزار (Downloads)
+## 🇬🇧 English
+
+### Table of Contents
+- [Downloads](#-downloads)
+- [Key Features](#-key-features)
+- [Keyboard Shortcuts](#-keyboard-shortcuts)
+- [Installation Guide](#-installation-guide)
+- [File Integrity & Checksums](#-file-integrity--checksums)
+- [Development & Building from Source](#-development--building-from-source)
+- [Quality Assurance & Testing](#-quality-assurance--testing)
+- [Project Architecture](#-project-architecture)
+- [License & Commercial Rights](#-license--commercial-rights)
+
+---
+
+### 📥 Downloads
+
+Ready-to-use desktop binaries for macOS and Windows are published and available on the [GitHub Releases page](https://github.com/ryanyv/invoice_app/releases/latest):
+
+| Operating System | Package Type / Architecture | File Size | Direct Download |
+| :--- | :--- | :--- | :--- |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Download Pipecal Pro 2.0.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro-2.0.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 `.exe` (NSIS) | ~108 MB | [Download Pipecal Pro Setup 2.0.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.Setup.2.0.0.exe) |
+| 🪟 **Windows** | Standalone Portable x64 `.exe` | ~108 MB | [Download Pipecal Pro 2.0.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.2.0.0.exe) |
+
+> 💡 **Release Notes**: View changelogs and historical builds on the [Releases Archive](https://github.com/ryanyv/invoice_app/releases).
+
+---
+
+### 🌟 Key Features
+
+#### 1. 🧮 Polyethylene Engineering Engine (PE Domain)
+- **DIN 8074 / 8075 & INSO 14427 Standard Compliance**: Built-in standard weight lookup tables for nominal pipe diameters from 16 mm to 1200 mm across all standard SDRs (SDR 7.4 through SDR 41) and working pressures (PN 2.5 to PN 25) for PE100, PE80, and PE63.
+- **Bidirectional Calculations**:
+  - Forward: Compute pipe weights, unit rates, and total sums dynamically from length.
+  - Reverse: Determine required length from client budget or target tonnage (e.g. calculating exact meters for a 2-tonne transport threshold).
+- **Intelligent Packaging Detector**:
+  - Automatically identifies packaging constraints: flexible coils (کلاف) for diameters $\le 125\text{ mm}$, and rigid branches (شاخه 6m or 12m) for diameters $> 125\text{ mm}$ with automated surplus/remainder length tracking.
+- **Freight Fleet Estimator**: Recommends appropriate commercial transport vehicles (Nissan pickup, Khavar truck, 6-wheel rigid truck, 10-wheel heavy truck, and flatbed trailer) based on cumulative mass and branch length.
+- **IME Polymer Pricing Formula (بورس کالا)**: Calculates raw material unit cost from Iran Mercantile Exchange polymer index, masterbatch ratios, production overhead, waste percentage, and manufacturer target margins.
+
+#### 2. 🧾 Invoicing & Quotations Workflow
+- **Live In-line Item Editing**: Update pipe diameters, SDRs, lengths, and fitting quantities/prices directly inside the invoice table with immediate real-time recalculation.
+- **Historical Invoices Archive**:
+  - In-place editing of historical invoices with revision integrity.
+  - 1-click invoice duplication into a new draft with fresh sequential numbering.
+- **CRM Lite Customer Directory**: Searchable client directory storing contact phone numbers, national economic IDs, postal codes, and client-specific discount profiles with instant form autofill.
+- **Dual Currency Consistency**: Native support for both Toman (تومان) and Rial (ریال) without historical rounding drift.
+- **Persian Number-to-Words**: Live conversion of total payable figures into fluent Persian words on all invoices and print templates.
+
+#### 3. 🖨️ Official Tax Printing & Versatile Exporting
+- **Official VAT Invoice vs Standard Quotation**: 1-click toggle between informal commercial quotations and official Iranian VAT tax invoices conforming to **Article 169 of the Direct Tax Code (ماده ۱۶۹ م.م)** with full seller/buyer economic IDs, postal codes, and bank IBAN.
+- **Orientation Toggle (Landscape / Portrait)**: Switch smoothly between A4 Landscape (افقی) and A4 Portrait (عمودی) print layouts with print-safe CSS `@page` page-break rules.
+- **Native PDF Export**: 1-click desktop PDF document generation via Electron IPC printing bridge.
+- **Excel / CSV Export with UTF-8 BOM**: Instant spreadsheet export compatible with Microsoft Excel on Windows and macOS with Persian character preservation.
+- **WhatsApp / SMS Instant Share**: Formatted plain-text summary generator ready for 1-click clipboard copy and sharing via messaging apps.
+
+#### 4. 🛡️ Offline-First Reliability & Data Safety
+- **100% Offline Font Bundle**: Packaged with local Vazirmatn variable font assets; completely independent of external CDNs or active internet connectivity.
+- **Rolling Disk Backups**: Automated rolling JSON snapshots stored in `userData/backups/` with a 20-version retention policy and one-click restore.
+- **Draft Auto-Save**: Prevents data loss during power disruptions by continuously persisting builder state.
+
+---
+
+### ⌨️ Keyboard Shortcuts
+
+| macOS Shortcut | Windows Shortcut | Action |
+| :---: | :---: | :--- |
+| <kbd>Cmd</kbd> + <kbd>S</kbd> | <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save current invoice |
+| <kbd>Cmd</kbd> + <kbd>P</kbd> | <kbd>Ctrl</kbd> + <kbd>P</kbd> | Open print preview & PDF export |
+| <kbd>Cmd</kbd> + <kbd>N</kbd> | <kbd>Ctrl</kbd> + <kbd>N</kbd> | Create new blank draft |
+| <kbd>Esc</kbd> | <kbd>Esc</kbd> | Close active modals & dialogs |
+
+---
+
+### 💻 Installation Guide
+
+#### 🍏 macOS
+1. Download `Pipecal.Pro-2.0.0-arm64.dmg`.
+2. Double-click the `.dmg` file and drag **Pipecal Pro** into your **Applications** folder.
+3. *If prompted by macOS Gatekeeper ("App is from an unidentified developer"):*
+   - Open **System Settings** > **Privacy & Security**.
+   - Scroll down to the **Security** section and click **Open Anyway**.
+   - Alternatively, execute this in Terminal:
+     ```bash
+     xattr -cr /Applications/Pipecal\ Pro.app
+     ```
+
+#### 🪟 Windows
+- **Setup Installer**: Run `Pipecal.Pro.Setup.2.0.0.exe` and follow the guided installer. A desktop shortcut will be generated.
+- **Portable Version**: Download `Pipecal.Pro.2.0.0.exe` and run it directly without installation or administrator privileges.
+- *If prompted by Windows SmartScreen ("Windows protected your PC"):*
+  - Click **More info**.
+  - Click **Run anyway**.
+
+---
+
+### 🔒 File Integrity & Checksums
+
+| File Name | SHA-256 Digest |
+| :--- | :--- |
+| `Pipecal.Pro-2.0.0-arm64.dmg` | `342a4ba06a08894d0ccd1283496efd92880ebc1797fb820315111d63f353466d` |
+| `Pipecal.Pro.Setup.2.0.0.exe` | `6e741f98fc55322d7ebdef7307a9b23ae7b4600b93ecded04e8eccd4424fb667` |
+| `Pipecal.Pro.2.0.0.exe` | `707acdd96df944509ff832762a6e881f059a29c02b16e2b6eb6f0106cea6f7df` |
+
+---
+
+### 🛠️ Development & Building from Source
+
+#### 1. Prerequisites
+- **Node.js** (v18 or higher)
+- **npm** or **yarn**
+- **Git**
+
+#### 2. Clone & Install
+```bash
+git clone https://github.com/ryanyv/invoice_app.git
+cd invoice_app
+npm install
+```
+
+#### 3. Development Mode
+```bash
+# Web preview mode via Vite:
+npm run dev
+
+# Full Electron desktop app development:
+npm run electron:dev
+```
+
+#### 4. Packaging Binaries
+```bash
+# Package macOS DMG (Apple Silicon):
+npm run electron:build:mac
+
+# Package Windows NSIS Setup & Portable executable:
+npm run electron:build:win
+
+# Fast unpack directory build:
+npm run electron:pack
+```
+
+---
+
+### 🧪 Quality Assurance & Testing
+
+The project includes an automated test suite powered by **Vitest**:
+- Over **208 automated unit and adversarial stress tests**.
+- Comprehensive verification of DIN weight tables, logistics estimations, and financial calculations.
+
+Run the test suite:
+```bash
+npm test
+```
+
+---
+
+### 📁 Project Architecture
+
+```text
+├── electron/
+│   ├── main.cjs               # Main process: IPC bridge, window lifecycle, PDF print
+│   └── preload.cjs            # Secure preload bridge exposing desktop APIs
+├── public/
+│   ├── fonts/                 # Offline bundled Vazirmatn variable fonts
+│   └── logo.png               # High-resolution company brand asset
+├── src/
+│   ├── components/
+│   │   ├── CustomerManager/   # Client CRM directory & auto-fill profile
+│   │   ├── InvoiceBuilder/    # Invoice editor form & dynamic item table
+│   │   ├── InvoiceHistory/    # Invoices archive, in-place edit, and duplicate
+│   │   ├── InvoicePrint/      # Official A4 landscape/portrait print preview
+│   │   ├── PriceManager/      # 250+ standard PE fittings & pipe price catalog
+│   │   └── Settings/          # Company tax registration & backup manager
+│   ├── services/
+│   │   ├── calculator.ts      # DIN standards, packaging, logistics, & IME formula
+│   │   ├── persianUtils.ts    # Jalali calendar, Persian digits & number-to-words
+│   │   └── storage.ts         # Dual-layer storage (localStorage + disk backups)
+│   ├── types/                 # TypeScript domain and entity types
+│   └── index.css              # Global styles & Tailwind CSS v4 setup
+├── release/                   # Packaged macOS DMG and Windows EXEs
+├── package.json               # Dependencies and build scripts
+├── vite.config.ts             # Vite configuration
+└── vitest.config.ts           # Vitest configuration
+```
+
+---
+
+### 📄 License & Commercial Rights
+
+Developed for **Polygharb (پلی غرب)**.  
+All rights reserved © Polygharb.
+
+---
+---
+
+## 🇮🇷 فارسی
+
+### فهرست مطالب
+- [📥 دانلود نرم‌افزار](#-دانلود-نرم‌افزار)
+- [🌟 امکانات و قابلیت‌ها](#-امکانات-و-قابلیت‌ها)
+- [⌨️ کلیدهای میانبر دسکتاپ](#️-کلیدهای-میانبر-دسکتاپ)
+- [💻 راهنمای نصب و راه‌اندازی](#-راهنمای-نصب-و-راه‌اندازی)
+- [🔒 اعتبارسنجی و هش فایل‌ها](#-اعتبارسنجی-و-هش-فایل‌ها)
+- [🛠️ راهنمای ساخت و توسعه](#️-راهنمای-ساخت-و-توسعه)
+- [🧪 تضمین کیفیت و تست‌ها](#-تضمین-کیفیت-و-تست‌ها)
+- [📁 ساختار پروژه](#-ساختار-پروژه)
+- [📄 لایسنس و حقوق تجاری](#-لایسنس-و-حقوق-تجاری)
+
+---
+
+### 📥 دانلود نرم‌افزار
 
 آخرین نسخه‌های آماده نصب برای سیستم‌عامل‌های مکینتاش و ویندوز مستقیماً از طریق تب [GitHub Releases](https://github.com/ryanyv/invoice_app/releases/latest) در دسترس هستند:
 
@@ -47,9 +251,9 @@
 
 ---
 
-## 🌟 امکانات و قابلیت‌ها (Key Features)
+### 🌟 امکانات و قابلیت‌ها
 
-### ۱. 🧮 محاسبات تخصصی مهندسی پلی‌اتیلن (PE Domain Engine)
+#### ۱. 🧮 محاسبات تخصصی مهندسی پلی‌اتیلن (PE Domain Engine)
 - **انطباق کامل با استانداردهای DIN 8074 / DIN 8075 و INSO 14427:** جدول وزنی استاندارد یکپارچه برای تمام سایزها (از ۱۶ تا ۱۲۰۰ میلی‌متر)، گریدهای PE100, PE80, PE63 و تمامی رده‌های فشاری و SDR (از SDR 7.4 تا SDR 41).
 - **محاسبات دوطرفه (مستقیم و معکوس):**
   - تبدیل لحظه‌ای متراژ به وزن کل و قیمت نهایی.
@@ -58,7 +262,7 @@
 - **تخمین‌گر نوع ناوگان حمل‌ونقل بار:** ارزیابی تناژ وزنی و طول شاخه جهت پیشنهاد هوشمند نوع خودرو (وانت نیسان، خاور، کامیون تک ۶ چرخ، کامیون جفت ۱۰ چرخ، و تریلی کفی).
 - **فرمول قیمت‌گذاری مواد اولیه بورس کالا (IME):** محاسبه قیمت پایه بر مبنای نرخ پلیمر بورس، درصد مستربچ، درصد ضایعات، هزینه‌های سربار و حاشیه سود کارخانه.
 
-### ۲. 🧾 موتور پیشرفته صدور پیش‌فاکتور و گردش کار (Invoicing Workflow)
+#### ۲. 🧾 موتور پیشرفته صدور پیش‌فاکتور و گردش کار (Invoicing Workflow)
 - **ویرایش درون‌خطی و زنده (Inline Editing):** ویرایش مستقیم سایز، طول، قیمت لوله‌ها و تعداد و نرخ اتصالات در خود جدول پیش‌فاکتور بدون نیاز به باز کردن دیالوگ یا فرم مجدد.
 - **آرشیو و بازبینی سوابق فاکتورها:**
   - امکان ویرایش درجا (In-Place Edit) فاکتورهای قدیمی و ذخیره با حفظ شناسه.
@@ -67,21 +271,21 @@
 - **تضمین ثبات مالی ارزی:** امکان صدور و نگهداری مستقل به دو واحد **تومان** و **ریال** بدون ایجاد خطای گردکردن در پیش‌فاکتورهای گذشته.
 - **تبدیل هوشمند به حروف فارسی:** درج خودکار مبلغ کل پرداختی به حروف شیوای فارسی در تمام پیش‌نمایش‌ها و برگه‌های چاپی.
 
-### ۳. 🖨️ چاپ رسمی و خروجی‌های چندگانه (Official Printing & Export)
+#### ۳. 🖨️ چاپ رسمی و خروجی‌های چندگانه (Official Printing & Export)
 - **فاکتور رسمی ماده ۱۶۹ در برابر پیش‌فاکتور ساده:** سوئیچ با یک کلیک بین پیش‌فاکتور ساده تجاری و فاکتور رسمی مالیاتی استاندارد دارایی (شامل کد اقتصادی، شناسه ملی، کد پستی و شماره شبا بانکی).
 - **تغییر جهت برگه (افقی / عمودی):** امکان انتخاب حالت چاپ A4 Landscape (افقی) یا A4 Portrait (عمودی) متناسب با حجم اقلام، با استایل‌بندی دقیق `@page` برای عدم شکست جدول.
 - **خروجی PDF مستقیم:** تولید مستقیم فایل PDF استاندارد از محیط برنامه دسکتاپ.
 - **خروجی اکسل (CSV) با استاندارد UTF-8 BOM:** همگام با نرم‌افزار Microsoft Excel در ویندوز و مک بدون به‌هم‌ریختگی حروف فارسی.
 - **اشتراک‌گذاری سریع واتساپ و پیامک:** کپی متن خلاصه پیش‌فاکتور به صورت مرتب و آماده ارسال در پیام‌رسان‌ها با یک کلیک.
 
-### ۴. 🛡️ پایداری آفلاین و امنیت اطلاعات (Offline Reliability)
+#### ۴. 🛡️ پایداری آفلاین و امنیت اطلاعات (Offline Reliability)
 - **استقلال کامل از اینترنت:** پکیج کامل فونت فارسی وزیرمتن (Vazirmatn) بدون نیاز به اینترنت یا CDN.
 - **پشتیبان‌گیری چرخشی خودکار روی دیسک (Rolling Backups):** تهیه خودکار نسخه‌های پشتیبان در مسیر دایرکتوری سیستم‌عامل (`userData/backups/`) با نگهداری ۲۰ نسخه اخیر و امکان بازیابی آسان.
 - **ذخیره خودکار پیش‌نویس (Draft Auto-Save):** جلوگیری کامل از اتلاف زمان و داده‌ها در صورت قطعی ناگهانی برق یا بسته‌شدن پنجره.
 
 ---
 
-## ⌨️ کلیدهای میانبر دسکتاپ (Keyboard Shortcuts)
+### ⌨️ کلیدهای میانبر دسکتاپ
 
 | کلید میانبر (macOS) | کلید میانبر (Windows) | عملکرد (Action) |
 | :---: | :---: | :--- |
@@ -92,10 +296,10 @@
 
 ---
 
-## 💻 راهنمای نصب و راه‌اندازی (Installation Guide)
+### 💻 راهنمای نصب و راه‌اندازی
 
-### 🍏 سیستم‌عامل مکینتاش (macOS)
-1. فایل `Pipecal Pro-2.0.0-arm64.dmg` را از جدول دانلود دریافت کنید.
+#### 🍏 سیستم‌عامل مکینتاش (macOS)
+1. فایل `Pipecal.Pro-2.0.0-arm64.dmg` را از جدول دانلود دریافت کنید.
 2. روی فایل دوبار کلیک کرده و آیکون **Pipecal Pro** را به پوشه **Applications** بکشید.
 3. **نکته امنیتی Gatekeeper مک:** از آنجایی که برنامه به صورت سازمانی و بدون امضای توسعه‌دهنده تجاری اپل توزیع شده است، در اولین اجرا ممکن است پیام امنیتی دریافت کنید:
    - به منوی **System Settings** > **Privacy & Security** بروید.
@@ -105,16 +309,16 @@
      xattr -cr /Applications/Pipecal\ Pro.app
      ```
 
-### 🪟 سیستم‌عامل ویندوز (Windows)
-- **نسخه نصبی (Setup):** فایل `Pipecal Pro Setup 2.0.0.exe` را اجرا کنید تا مراحل نصب استاندارد طی شده و میانبر روی دسکتاپ قرار گیرد.
-- **نسخه پرتابل (Portable):** فایل `Pipecal Pro 2.0.0.exe` را دانلود کرده و بدون نیاز به نصب یا دسترسی Administrator، مستقیماً اجرا نمایید.
+#### 🪟 سیستم‌عامل ویندوز (Windows)
+- **نسخه نصبی (Setup):** فایل `Pipecal.Pro.Setup.2.0.0.exe` را اجرا کنید تا مراحل نصب استاندارد طی شده و میانبر روی دسکتاپ قرار گیرد.
+- **نسخه پرتابل (Portable):** فایل `Pipecal.Pro.2.0.0.exe` را دانلود کرده و بدون نیاز به نصب یا دسترسی Administrator، مستقیماً اجرا نمایید.
 - **نکته امنیتی Windows SmartScreen:** در صورت نمایش پنجره آبی‌رنگ محافظت ویندوز:
   - روی عبارت **More info** کلیک کنید.
   - دکمه **Run anyway** را بزنید.
 
 ---
 
-## 🔒 اعتبارسنجی و هش فایل‌ها (Checksums)
+### 🔒 اعتبارسنجی و هش فایل‌ها
 
 برای اطمینان از سلامت و عدم تغییر فایل‌های دریافتی، می‌توانید هش‌های SHA-256 زیر را بررسی کنید:
 
@@ -126,21 +330,21 @@
 
 ---
 
-## 🛠️ راهنمای ساخت و توسعه (Development & Build)
+### 🛠️ راهنمای ساخت و توسعه
 
-### ۱. پیش‌نیازها
+#### ۱. پیش‌نیازها
 - **Node.js** نسخه 18 یا بالاتر
 - **npm** یا **yarn**
 - **Git**
 
-### ۲. کلون و نصب وابستگی‌ها
+#### ۲. کلون و نصب وابستگی‌ها
 ```bash
 git clone https://github.com/ryanyv/invoice_app.git
 cd invoice_app
 npm install
 ```
 
-### ۳. اجرای محیط توسعه
+#### ۳. اجرای محیط توسعه
 ```bash
 # اجرای نسخه وب با سرور Vite:
 npm run dev
@@ -149,7 +353,7 @@ npm run dev
 npm run electron:dev
 ```
 
-### ۴. بیلد بسته‌های نصبی (Packaging)
+#### ۴. بیلد بسته‌های نصبی (Packaging)
 ```bash
 # بیلد فایل DMG برای مک:
 npm run electron:build:mac
@@ -163,7 +367,7 @@ npm run electron:pack
 
 ---
 
-## 🧪 تضمین کیفیت و تست‌ها (Testing & QA)
+### 🧪 تضمین کیفیت و تست‌ها
 
 پروژه مجهز به یک مجموعه جامع آزمون‌های خودکار و چالش‌های Adversarial با فریم‌ورک **Vitest** است:
 - بیش از **۲۰۸ آزمون واحد و یکپارچه** با درصد پوشش بالا.
@@ -176,7 +380,7 @@ npm test
 
 ---
 
-## 📁 ساختار پروژه (Project Architecture)
+### 📁 ساختار پروژه
 
 ```text
 ├── electron/
@@ -207,7 +411,7 @@ npm test
 
 ---
 
-## 📄 لایسنس و حقوق تجاری (License)
+### 📄 لایسنس و حقوق تجاری
 
 توسعه‌یافته به سفارش و برای مجموعه **پلی غرب (Polygharb)**.  
 کلیه حقوق مادی و معنوی محفوظ است © Polygharb.
