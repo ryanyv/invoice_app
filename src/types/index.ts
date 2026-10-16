@@ -230,3 +230,52 @@ export interface MarketPriceSnapshot {
   items: MarketPolymerItem[];
 }
 
+// Accounting & CRM Lite Types
+export type PaymentMethod = 'transfer' | 'cheque' | 'pos' | 'cash' | 'deposit';
+export type PaymentStatus = 'cleared' | 'pending' | 'bounced';
+
+export interface PaymentRecord {
+  id: string;
+  customerId: string;
+  customerName: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  amount: number;
+  currencyUnit: 'تومان' | 'ریال';
+  paymentDate: string; // Jalali date e.g. "1403/07/25"
+  method: PaymentMethod;
+  referenceNumber?: string; // Tracking code / Cheque number / Sayad ID
+  bankName?: string; // e.g. بانک ملت، صادرات، ملی، تجارت، پاسارگاد
+  chequeDueDate?: string; // Jalali date for cheque maturity
+  status: PaymentStatus;
+  notes?: string;
+  createdAt: string; // ISO
+}
+
+export interface CustomerAccountSummary {
+  customerId: string;
+  customerName: string;
+  totalInvoiced: number; // کل مبالغ فاکتورها (بدهکار)
+  totalPaid: number; // کل دریافتی‌های قطعی و وصول شده (بستانکار)
+  totalPendingCheques: number; // مجموع اسناد در جریان وصول
+  balance: number; // مانده حساب خالص (بدهکار: مثبت، بستانکار: منفی، تسویه: 0)
+  balanceStatus: 'settled' | 'debtor' | 'creditor';
+  invoiceCount: number;
+  paymentCount: number;
+  lastInvoiceDate: string | null;
+  lastPaymentDate: string | null;
+}
+
+export interface InvoiceSettlementInfo {
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  date: string;
+  totalAmount: number;
+  currencyUnit: string;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'fully_paid' | 'partially_paid' | 'unpaid';
+  paymentCount: number;
+}
+

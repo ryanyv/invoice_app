@@ -20,9 +20,11 @@ import {
   Copy,
   Edit3,
   Building2,
+  Scale,
 } from 'lucide-react';
-import { CompanySettings, Customer, Invoice } from '../../types';
+import { CompanySettings, Customer, Invoice, PaymentRecord } from '../../types';
 import { StorageService } from '../../services/storage';
+import { AccountingService } from '../../services/accountingService';
 import { formatNumber, toPersianDigits } from '../../services/persianUtils';
 
 interface CustomerManagerProps {
@@ -34,9 +36,11 @@ interface CustomerManagerProps {
   onPreviewPrintInvoice: (invoice: Invoice) => void;
   onEditInvoice: (invoice: Invoice) => void;
   onDuplicateInvoice: (invoice: Invoice) => void;
+  payments?: PaymentRecord[];
+  onNavigateToAccounting?: (customerId?: string) => void;
 }
 
-type CustomerFilter = 'all' | 'official' | 'vip' | 'with_orders';
+type CustomerFilter = 'all' | 'official' | 'vip' | 'with_orders' | 'debtors';
 
 interface CustomerStats {
   invoiceCount: number;
@@ -54,6 +58,8 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
   onPreviewPrintInvoice,
   onEditInvoice,
   onDuplicateInvoice,
+  payments,
+  onNavigateToAccounting,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<CustomerFilter>('all');
@@ -106,32 +112,54 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
     return map;
   }, [customers, invoices]);
 
+  // Financial summaries for all customers (CRM Lite Accounting)
+  const financialSummaries = useMemo(() => {
+    return AccountingService.computeCustomerSummaries(customers, invoices, payments || StorageService.getPayments());
+  }, [customers, invoices, payments]);
+
+  const financialSummaryMap = useMemo(() => {
+    const map = new Map<string, (typeof financialSummaries)[0]>();
+    financialSummaries.forEach((s) => map.set(s.customerId, s));
+    return map;
+  }, [financialSummaries]);
+
   // Overall CRM KPIs
   const kpis = useMemo(() => {
     let officialCount = 0;
     let vipCount = 0;
     let totalCustomerRevenue = 0;
+    let debtorCount = 0;
+    let totalDebt = 0;
     for (const c of customers) {
       if (c.economicCode || c.nationalId) officialCount++;
       if (c.defaultDiscount && c.defaultDiscount > 0) vipCount++;
       const st = statsByCustomerId.get(c.id);
       if (st) totalCustomerRevenue += st.totalSpent;
+      const fin = financialSummaryMap.get(c.id);
+      if (fin && fin.balance > 1) {
+        debtorCount++;
+        totalDebt += fin.balance;
+      }
     }
     return {
       totalCustomers: customers.length,
       officialCount,
       vipCount,
       totalCustomerRevenue,
+      debtorCount,
+      totalDebt,
     };
-  }, [customers, statsByCustomerId]);
+  }, [customers, statsByCustomerId, financialSummaryMap]);
 
   // Filtered customers list
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
       const st = statsByCustomerId.get(c.id);
+      const fin = financialSummaryMap.get(c.id);
       if (activeFilter === 'official' && !c.economicCode && !c.nationalId) return false;
       if (activeFilter === 'vip' && (!c.defaultDiscount || c.defaultDiscount <= 0)) return false;
       if (activeFilter === 'with_orders' && (!st || st.invoiceCount === 0)) return false;
+      if (activeFilter === 'debtors' && (!fin || fin.balanceStatus !== 'debtor')) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -151,7 +179,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
 
       return true;
     });
-  }, [customers, statsByCustomerId, activeFilter, searchQuery]);
+  }, [customers, statsByCustomerId, financialSummaryMap, activeFilter, searchQuery]);
 
   // Open modal for adding new customer
   const handleOpenAddModal = () => {
@@ -438,6 +466,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
           {(
             [
               { id: 'all', label: `همه (${toPersianDigits(customers.length)})` },
+              { id: 'debtors', label: `بدهکاران معوق (${toPersianDigits(kpis.debtorCount)})` },
               { id: 'official', label: `رسمی ماده ۱۶۹ (${toPersianDigits(kpis.officialCount)})` },
               { id: 'vip', label: `دارای تخفیف (${toPersianDigits(kpis.vipCount)})` },
               { id: 'with_orders', label: 'دارای سابقه خرید' },
@@ -469,13 +498,14 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
                 <th className="py-3.5 px-4">مشخصات رسمی (ماده ۱۶۹)</th>
                 <th className="py-3.5 px-4 text-center">تخفیف پیش‌فرض</th>
                 <th className="py-3.5 px-4 text-center">سابقه و حجم خرید</th>
+                <th className="py-3.5 px-4 text-center">تراز مالی و مانده حساب</th>
                 <th className="py-3.5 px-4 text-center">عملیات سریع</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/60">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     {searchQuery || activeFilter !== 'all'
                       ? 'مشتری مطابق با فیلتر یا عبارت جستجو شده یافت نشد.'
                       : 'هنوز مشتری در سیستم ثبت نشده است. روی «ثبت مشتری جدید» کلیک کنید.'}
@@ -581,9 +611,56 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
                         )}
                       </td>
 
+                      {/* Financial Balance & CRM Accounting */}
+                      <td className="py-3.5 px-4 text-center">
+                        {(() => {
+                          const fin = financialSummaryMap.get(c.id);
+                          if (!fin) return <span className="text-slate-500 text-xs">-</span>;
+                          if (fin.balanceStatus === 'settled') {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>تسویه کامل</span>
+                              </span>
+                            );
+                          }
+                          if (fin.balanceStatus === 'debtor') {
+                            return (
+                              <div className="space-y-0.5">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                                  <span>بدهکار: {formatNumber(fin.balance)}</span>
+                                </span>
+                                {fin.totalPendingCheques > 0 && (
+                                  <div className="text-[10px] text-indigo-300 font-mono">
+                                    {formatNumber(fin.totalPendingCheques)} چک در جریان
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 font-mono">
+                              <span>بستانکار: {formatNumber(Math.abs(fin.balance))}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
+
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          {/* Accounting / Ledger */}
+                          {onNavigateToAccounting && (
+                            <button
+                              onClick={() => onNavigateToAccounting(c.id)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-colors cursor-pointer"
+                              title="مشاهده گردش حساب و ثبت دریافت در بخش حسابداری"
+                            >
+                              <Scale className="w-3.5 h-3.5" />
+                              <span>حسابداری</span>
+                            </button>
+                          )}
+
                           {/* Quick Issue Invoice */}
                           <button
                             onClick={() => onStartInvoiceForCustomer(c)}

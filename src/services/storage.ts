@@ -5,6 +5,7 @@ import {
   FittingCatalogItem,
   GradeSdrPn,
   Invoice,
+  PaymentRecord,
   WeightTable,
 } from '../types';
 import {
@@ -24,6 +25,7 @@ const KEYS = {
   WEIGHT_TABLE: 'pipecal_weight_table_v2',
   GRADE_SDR_PN: 'pipecal_grade_sdr_pn_v2',
   DRAFT: 'pipecal_draft_invoice_v2',
+  PAYMENTS: 'pipecal_payments_v2',
 };
 
 export class StorageService {
@@ -287,6 +289,99 @@ export class StorageService {
     localStorage.removeItem(KEYS.DRAFT);
   }
 
+  // --- Payments & Financial Accounting (CRM Lite) ---
+  static getPayments(): PaymentRecord[] {
+    try {
+      const data = localStorage.getItem(KEYS.PAYMENTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static savePayments(payments: PaymentRecord[]): void {
+    try {
+      localStorage.setItem(KEYS.PAYMENTS, JSON.stringify(payments));
+    } catch {
+      // safe fallback in environments without localStorage
+    }
+    this.triggerDiskBackup();
+  }
+
+  static addPayment(payment: PaymentRecord): void {
+    const list = this.getPayments();
+    const clean: PaymentRecord = {
+      ...payment,
+      id: payment.id || 'pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      createdAt: payment.createdAt || new Date().toISOString(),
+    };
+    list.unshift(clean);
+    this.savePayments(list);
+  }
+
+  static updatePayment(payment: PaymentRecord): void {
+    const list = this.getPayments();
+    const idx = list.findIndex((p) => p.id === payment.id);
+    if (idx !== -1) {
+      list[idx] = payment;
+      this.savePayments(list);
+    }
+  }
+
+  static deletePayment(id: string): void {
+    const list = this.getPayments().filter((p) => p.id !== id);
+    this.savePayments(list);
+  }
+
+  static exportPaymentsToCsv(): string {
+    const payments = this.getPayments();
+    const headers = [
+      'شناسه سند',
+      'تاریخ دریافت',
+      'نام خریدار',
+      'روش پرداخت',
+      'شماره پیگیری / چک',
+      'بانک عامل',
+      'سررسید چک',
+      'بابت شماره فاکتور',
+      'مبلغ',
+      'واحد پول',
+      'وضعیت وصول',
+      'توضیحات و بابت',
+    ];
+    const methodNames: Record<string, string> = {
+      transfer: 'حواله بانکی',
+      cheque: 'چک صیادی',
+      pos: 'کارت‌خوان / پوز',
+      cash: 'نقدی',
+      deposit: 'بیعانه / پیش‌پرداخت',
+    };
+    const statusNames: Record<string, string> = {
+      cleared: 'وصول شده',
+      pending: 'در جریان وصول',
+      bounced: 'برگشتی',
+    };
+    const escapeCell = (val: string | number | undefined) => {
+      if (val === undefined || val === null) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+    const rows = payments.map((p) => [
+      escapeCell(p.id),
+      escapeCell(p.paymentDate),
+      escapeCell(p.customerName),
+      escapeCell(methodNames[p.method] || p.method),
+      escapeCell(p.referenceNumber || ''),
+      escapeCell(p.bankName || ''),
+      escapeCell(p.chequeDueDate || ''),
+      escapeCell(p.invoiceNumber || ''),
+      p.amount,
+      escapeCell(p.currencyUnit),
+      escapeCell(statusNames[p.status] || p.status),
+      escapeCell(p.notes || ''),
+    ]);
+    return '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  }
+
   // --- Export & Backup ---
   static createFullBackup(): string {
     const backup = {
@@ -297,6 +392,7 @@ export class StorageService {
       discounts: this.getDiscounts(),
       customers: this.getCustomers(),
       invoices: this.getInvoices(),
+      payments: this.getPayments(),
       weightTable: this.getWeightTable(),
       gradeSdrPn: this.getGradeSdrPn(),
     };
@@ -311,6 +407,7 @@ export class StorageService {
       if (data.discounts) localStorage.setItem(KEYS.DISCOUNTS, JSON.stringify(data.discounts));
       if (data.customers) localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(data.customers));
       if (data.invoices) localStorage.setItem(KEYS.INVOICES, JSON.stringify(data.invoices));
+      if (data.payments) localStorage.setItem(KEYS.PAYMENTS, JSON.stringify(data.payments));
       if (data.weightTable) localStorage.setItem(KEYS.WEIGHT_TABLE, JSON.stringify(data.weightTable));
       if (data.gradeSdrPn) localStorage.setItem(KEYS.GRADE_SDR_PN, JSON.stringify(data.gradeSdrPn));
       this.triggerDiskBackup();

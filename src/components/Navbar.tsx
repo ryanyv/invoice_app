@@ -1,8 +1,8 @@
 import React from 'react';
-import { FileText, Database, History, Settings, Users } from 'lucide-react';
+import { FileText, Database, History, Settings, Users, Receipt } from 'lucide-react';
 import { getCurrentJalaliDate, toPersianDigits } from '../services/persianUtils';
 
-export type NavTab = 'builder' | 'prices' | 'customers' | 'history';
+export type NavTab = 'builder' | 'prices' | 'customers' | 'accounting' | 'history';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -10,6 +10,7 @@ interface NavbarProps {
   onOpenSettings: () => void;
   currencyUnit: string;
   customerCount?: number;
+  debtorCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   currencyUnit,
   customerCount,
+  debtorCount,
 }) => {
   const currentDate = getCurrentJalaliDate();
 
@@ -80,6 +82,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               {typeof customerCount === 'number' && customerCount > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-white/15 font-mono">
                   {toPersianDigits(customerCount)}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('accounting')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+                activeTab === 'accounting'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Receipt className="w-4 h-4" />
+              <span>حسابداری و مالی</span>
+              {typeof debtorCount === 'number' && debtorCount > 0 && (
+                <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                  {toPersianDigits(debtorCount)}
                 </span>
               )}
             </button>

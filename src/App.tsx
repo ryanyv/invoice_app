@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar, NavTab } from './components/Navbar';
 import { InvoiceBuilder } from './components/InvoiceBuilder/InvoiceBuilder';
 import { PriceManager } from './components/PriceManager/PriceManager';
 import { CustomerManager } from './components/CustomerManager/CustomerManager';
+import { AccountingManager } from './components/AccountingManager/AccountingManager';
 import { InvoiceHistory } from './components/InvoiceHistory/InvoiceHistory';
 import { InvoicePrintView } from './components/InvoicePrint/InvoicePrintView';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { StorageService } from './services/storage';
+import { AccountingService } from './services/accountingService';
 import { getCurrentJalaliDate } from './services/persianUtils';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import {
@@ -16,6 +18,7 @@ import {
   FittingCatalogItem,
   GradeSdrPn,
   Invoice,
+  PaymentRecord,
   WeightTable,
 } from './types';
 
@@ -33,6 +36,13 @@ export const App: React.FC = () => {
   const [discounts, setDiscounts] = useState<DiscountRule[]>(() => StorageService.getDiscounts());
   const [customers, setCustomers] = useState<Customer[]>(() => StorageService.getCustomers());
   const [invoices, setInvoices] = useState<Invoice[]>(() => StorageService.getInvoices());
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => StorageService.getPayments());
+
+  // Debtor Count for Navbar Badge
+  const debtorCount = useMemo(() => {
+    const summaries = AccountingService.computeCustomerSummaries(customers, invoices, payments);
+    return summaries.filter((s) => s.balance > 1).length;
+  }, [customers, invoices, payments]);
 
   // Standards (DIN & SDR tables)
   const [weightTable] = useState<WeightTable>(() => StorageService.getWeightTable());
@@ -106,6 +116,7 @@ export const App: React.FC = () => {
     setDiscounts(StorageService.getDiscounts());
     setCustomers(StorageService.getCustomers());
     setInvoices(StorageService.getInvoices());
+    setPayments(StorageService.getPayments());
   };
 
   // Global Desktop Keyboard Shortcuts (Ctrl/Cmd+S, Ctrl/Cmd+P, Ctrl/Cmd+N, Escape)
@@ -166,6 +177,7 @@ export const App: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         currencyUnit={settings.currencyUnit}
         customerCount={customers.length}
+        debtorCount={debtorCount}
       />
 
       {/* Main Content Area */}
@@ -207,11 +219,25 @@ export const App: React.FC = () => {
             customers={customers}
             onUpdateCustomers={setCustomers}
             invoices={invoices}
+            payments={payments}
             settings={settings}
             onStartInvoiceForCustomer={handleStartInvoiceForCustomer}
             onPreviewPrintInvoice={(inv) => setPreviewInvoice(inv)}
             onEditInvoice={handleEditInvoice}
             onDuplicateInvoice={handleDuplicateInvoice}
+            onNavigateToAccounting={() => setActiveTab('accounting')}
+          />
+        )}
+
+        {activeTab === 'accounting' && (
+          <AccountingManager
+            customers={customers}
+            invoices={invoices}
+            payments={payments}
+            onUpdatePayments={setPayments}
+            settings={settings}
+            onStartInvoiceForCustomer={handleStartInvoiceForCustomer}
+            onPreviewPrintInvoice={(inv) => setPreviewInvoice(inv)}
           />
         )}
 
