@@ -212,7 +212,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
             <div className="border-2 border-slate-900 rounded-lg p-3 mb-4 bg-slate-50">
               <div className="flex items-center justify-between">
                 <div className="w-16 h-16 border border-slate-300 rounded-md p-1 flex items-center justify-center bg-white">
-                  <img src="/logo.png" alt="لوگو شرکت" className="max-w-full max-h-full object-contain" />
+                  <img src="./logo.png" alt="لوگو شرکت" className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="text-center flex-1">
                   <h1 className="text-base sm:text-lg font-black text-slate-950">
@@ -320,7 +320,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
               {/* Logo & Company info */}
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 border border-slate-300 rounded-lg p-1 flex items-center justify-center">
-                  <img src="/logo.png" alt="پلی غرب" className="max-w-full max-h-full object-contain" />
+                  <img src="./logo.png" alt="پلی غرب" className="max-w-full max-h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-lg sm:text-xl font-extrabold text-slate-900">{settings.name}</h1>

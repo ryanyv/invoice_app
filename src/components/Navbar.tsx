@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo & App Title */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center overflow-hidden p-1">
-              <img src="/logo.png" alt="پلی غرب" className="w-full h-full object-contain" />
+              <img src="./logo.png" alt="پلی غرب" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-2">
