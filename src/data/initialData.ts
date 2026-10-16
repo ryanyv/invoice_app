@@ -14,5 +14,12 @@ export const defaultBasePipePrices = {
 export const initialCompanySettings: CompanySettings = {
   ...(seedData.companyInfo as any),
   basePipePrices: (seedData as any).basePipePrices || defaultBasePipePrices,
+  economicCode: '411456789123',
+  nationalId: '10103567890',
+  registrationNumber: '384521',
+  postalCode: '1548763211',
+  bankName: 'بانک ملت (شعبه میرداماد)',
+  bankAccount: '1234567890',
+  bankIban: 'IR120120000000012345678901',
 };
 

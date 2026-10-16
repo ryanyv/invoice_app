@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Trash2, Printer, FileText, Edit3, Copy } from 'lucide-react';
+import { Search, Trash2, Printer, FileText, Edit3, Copy, FileSpreadsheet } from 'lucide-react';
 import { CompanySettings, Invoice } from '../../types';
 import { formatNumber, toPersianDigits } from '../../services/persianUtils';
 import { StorageService } from '../../services/storage';
+import { exportInvoiceToCsv } from '../../utils/exportUtils';
 
 interface InvoiceHistoryProps {
   invoices: Invoice[];
@@ -141,6 +142,15 @@ export const InvoiceHistory: React.FC<InvoiceHistoryProps> = ({
                         >
                           <Printer className="w-3.5 h-3.5" />
                           <span>چاپ / PDF</span>
+                        </button>
+
+                        <button
+                          onClick={() => exportInvoiceToCsv(inv, settings)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-colors cursor-pointer"
+                          title="خروجی فایل اکسل / CSV"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>اکسل / CSV</span>
                         </button>
 
                         <button

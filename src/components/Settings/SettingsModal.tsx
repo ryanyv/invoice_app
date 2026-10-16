@@ -152,6 +152,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* Official Registration & Banking Details (R3 ماده ۱۶۹ م.م) */}
+          <div className="space-y-4 pt-4 border-t border-slate-700">
+            <h3 className="text-sm font-bold text-blue-400">اطلاعات رسمی، کد اقتصادی و حساب بانکی (فاکتور رسمی ماده ۱۶۹)</h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">کد اقتصادی شرکت:</label>
+                <input
+                  type="text"
+                  value={formData.economicCode || ''}
+                  onChange={(e) => setFormData({ ...formData, economicCode: e.target.value })}
+                  placeholder="مثال: ۴۱۱۴۵۶۷۸۹۱۲۳"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">شناسه ملی شرکت:</label>
+                <input
+                  type="text"
+                  value={formData.nationalId || ''}
+                  onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+                  placeholder="مثال: ۱۰۱۰۳۵۶۷۸۹۰"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">شماره ثبت:</label>
+                <input
+                  type="text"
+                  value={formData.registrationNumber || ''}
+                  onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                  placeholder="مثال: ۳۸۴۵۲۱"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">کد پستی ۱۰ رقمی:</label>
+                <input
+                  type="text"
+                  value={formData.postalCode || ''}
+                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                  placeholder="مثال: ۱۵۴۸۷۶۳۲۱۱"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">نام بانک:</label>
+                <input
+                  type="text"
+                  value={formData.bankName || ''}
+                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  placeholder="مثال: بانک ملت شعبه میرداماد"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">شماره حساب بانک:</label>
+                <input
+                  type="text"
+                  value={formData.bankAccount || ''}
+                  onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                  placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-slate-400 mb-1">شماره شبا (IBAN):</label>
+                <input
+                  type="text"
+                  value={formData.bankIban || ''}
+                  onChange={(e) => setFormData({ ...formData, bankIban: e.target.value })}
+                  placeholder="مثال: IR120120000000012345678901"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left uppercase focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Financial & Invoicing Defaults */}
           <div className="space-y-4 pt-4 border-t border-slate-700">
             <h3 className="text-sm font-bold text-blue-400">تنظیمات مالی و شماره‌گذاری</h3>

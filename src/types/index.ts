@@ -155,6 +155,7 @@ export interface CompanySettings {
   invoiceCounter: number;
   currencyUnit: 'تومان' | 'ریال';
   basePipePrices: Record<PipeGrade, number>;
+  // R3 Official Details (ماده ۱۶۹ م.م)
   economicCode?: string;
   nationalId?: string;
   registrationNumber?: string;
