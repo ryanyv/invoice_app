@@ -11,6 +11,14 @@ import {
   Edit3,
   Copy,
   RotateCcw,
+  Truck,
+  Factory,
+  Package,
+  Info,
+  X,
+  Sparkles,
+  AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import {
   CompanySettings,
@@ -24,12 +32,25 @@ import {
   PipeItem,
   FittingItem,
   WeightTable,
+  PackagingType,
+  PackagingOptions,
+  PackagingResult,
+  FreightRecommendation,
+  RawMaterialCostResult,
 } from '../../types';
 import {
   computeInvoiceSummary,
   computePipeItem,
   getApplicableDiscount,
   getWeightPerMeter,
+  isCoilAllowed,
+  computePackaging,
+  estimateFreightVehicle,
+  calculateLengthFromMass,
+  calculatePricePerKgFromTotal,
+  calculateReversePipe,
+  calculateRawMaterialCost,
+  FREIGHT_VEHICLES,
 } from '../../services/calculator';
 import {
   formatNumber,
@@ -134,6 +155,135 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   // Live pipe total weight and total price
   const currentPipeWeight = currentWpm ? Number((currentWpm * pipeLength).toFixed(3)) : 0;
   const currentPipeTotalPrice = Math.round(currentPipeWeight * pipePricePerKg);
+
+  // --- PACKAGING STATE FOR PIPE FORM ---
+  const [pipePackagingType, setPipePackagingType] = useState<PackagingType>('coil');
+  const [pipeBranchLength, setPipeBranchLength] = useState<6 | 12>(6);
+  const [pipeCoilLength, setPipeCoilLength] = useState<number>(100);
+
+  // Sync packaging mode if diameter > 125mm (strictly branch only)
+  useEffect(() => {
+    if (!isCoilAllowed(pipeDiameter)) {
+      setPipePackagingType('branch');
+      setPipeBranchLength(pipeDiameter > 125 ? 12 : 6);
+    }
+  }, [pipeDiameter]);
+
+  const currentPackaging = useMemo(() => {
+    return computePackaging(pipeDiameter, pipeLength, {
+      preferredType: isCoilAllowed(pipeDiameter) ? pipePackagingType : 'branch',
+      branchLength: pipeBranchLength,
+      coilLength: pipeCoilLength,
+    });
+  }, [pipeDiameter, pipeLength, pipePackagingType, pipeBranchLength, pipeCoilLength]);
+
+  // --- REVERSE PIPE CALCULATION STATE ---
+  const [showReversePanel, setShowReversePanel] = useState<boolean>(false);
+  const [reverseMode, setReverseMode] = useState<'tonnage' | 'budget'>('tonnage');
+  const [reverseWeightUnit, setReverseWeightUnit] = useState<'ton' | 'kg'>('ton');
+  const [reverseTargetValue, setReverseTargetValue] = useState<number>(5); // default 5 tons
+  const [reverseDiameter, setReverseDiameter] = useState<number>(110);
+  const [reverseSdr, setReverseSdr] = useState<number>(11);
+  const [reverseGrade, setReverseGrade] = useState<PipeGrade>('PE100');
+  const [reversePn, setReversePn] = useState<number>(16);
+  const [reversePricePerKg, setReversePricePerKg] = useState<number>(() => settings?.basePipePrices?.PE100 || 95000);
+  const [reversePackagingType, setReversePackagingType] = useState<PackagingType>('coil');
+  const [reverseBranchLength, setReverseBranchLength] = useState<6 | 12>(6);
+  const [reverseCoilLength, setReverseCoilLength] = useState<number>(100);
+
+  // Available SDRs for reverse diameter
+  const reverseAvailableSdrs = useMemo(() => {
+    const dObj = weightTable?.[reverseDiameter];
+    if (!dObj) return [];
+    return Object.keys(dObj).map(Number).sort((a, b) => a - b);
+  }, [weightTable, reverseDiameter]);
+
+  // Sync PN for reverse
+  useEffect(() => {
+    const gradeMap = gradeSdrPn?.[reverseGrade];
+    if (gradeMap && gradeMap[reverseSdr] !== undefined) {
+      setReversePn(gradeMap[reverseSdr]);
+    }
+  }, [reverseGrade, reverseSdr, gradeSdrPn]);
+
+  // Sync reverse price with grade
+  useEffect(() => {
+    if (settings?.basePipePrices?.[reverseGrade]) {
+      setReversePricePerKg(settings.basePipePrices[reverseGrade]);
+    }
+  }, [reverseGrade, settings?.basePipePrices]);
+
+  // Sync packaging allowance for reverse diameter
+  useEffect(() => {
+    if (!isCoilAllowed(reverseDiameter)) {
+      setReversePackagingType('branch');
+      setReverseBranchLength(reverseDiameter > 125 ? 12 : 6);
+    }
+  }, [reverseDiameter]);
+
+  // Live reverse calculation
+  const reverseResult = useMemo(() => {
+    const targetTonnage = reverseMode === 'tonnage' && reverseWeightUnit === 'ton' ? reverseTargetValue : undefined;
+    const targetWeightKg = reverseMode === 'tonnage' && reverseWeightUnit === 'kg' ? reverseTargetValue : undefined;
+    const targetBudget = reverseMode === 'budget' ? reverseTargetValue : undefined;
+
+    return calculateReversePipe(
+      {
+        mode: reverseMode,
+        diameter: reverseDiameter,
+        sdr: reverseSdr,
+        peGrade: reverseGrade,
+        pricePerKg: reversePricePerKg,
+        targetTonnage,
+        targetWeightKg,
+        targetBudget,
+        packagingPreference: isCoilAllowed(reverseDiameter) ? reversePackagingType : 'branch',
+        branchLengthPreference: reverseBranchLength,
+        coilLengthPreference: reverseCoilLength,
+      },
+      weightTable
+    );
+  }, [
+    reverseMode,
+    reverseWeightUnit,
+    reverseTargetValue,
+    reverseDiameter,
+    reverseSdr,
+    reverseGrade,
+    reversePricePerKg,
+    reversePackagingType,
+    reverseBranchLength,
+    reverseCoilLength,
+    weightTable,
+  ]);
+
+  // --- RAW MATERIAL COST CALCULATOR STATE ---
+  const [showCostModal, setShowCostModal] = useState<boolean>(false);
+  const [costTargetForm, setCostTargetForm] = useState<'pipe' | 'reverse'>('pipe');
+  const [rawPolymerPrice, setRawPolymerPrice] = useState<number>(85000);
+  const [rawMasterbatchPct, setRawMasterbatchPct] = useState<number>(2.0);
+  const [rawMasterbatchPrice, setRawMasterbatchPrice] = useState<number>(130000);
+  const [rawWastePct, setRawWastePct] = useState<number>(1.5);
+  const [rawConversionCost, setRawConversionCost] = useState<number>(10000);
+  const [rawProfitMarginPct, setRawProfitMarginPct] = useState<number>(10);
+
+  const rawCostResult = useMemo(() => {
+    return calculateRawMaterialCost({
+      polymerPricePerKg: rawPolymerPrice,
+      masterbatchPercentage: rawMasterbatchPct,
+      masterbatchPricePerKg: rawMasterbatchPrice,
+      wastePercentage: rawWastePct,
+      conversionCostPerKg: rawConversionCost,
+      profitMarginPercentage: rawProfitMarginPct,
+    });
+  }, [
+    rawPolymerPrice,
+    rawMasterbatchPct,
+    rawMasterbatchPrice,
+    rawWastePct,
+    rawConversionCost,
+    rawProfitMarginPct,
+  ]);
 
   // --- FITTING FORM STATE ---
   const activeFittings = useMemo(() => fittings.filter((f) => f.isActive), [fittings]);
@@ -518,14 +668,62 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         pn: pipePn,
         length: pipeLength,
         pricePerKg: pipePricePerKg,
+        packagingOptions: {
+          preferredType: isCoilAllowed(pipeDiameter) ? pipePackagingType : 'branch',
+          branchLength: pipeBranchLength,
+          coilLength: pipeCoilLength,
+        },
       },
       weightTable
     );
 
     if (item) {
       setItems([...items, item]);
-      notify(`لوله سایز ${pipeDiameter} با گرید ${pipeGrade} افزوده شد.`);
+      notify(`لوله سایز ${pipeDiameter} با گرید ${pipeGrade} (${item.packaging?.labelPersian}) افزوده شد.`);
     }
+  };
+
+  // Insert Reverse Calculated Pipe Item handler
+  const handleInsertReverseItem = () => {
+    if (!reverseResult) {
+      alert('محاسبه معکوس با مقادیر فعلی معتبر نیست.');
+      return;
+    }
+
+    const item = computePipeItem(
+      {
+        peGrade: reverseGrade,
+        diameter: reverseDiameter,
+        sdr: reverseSdr,
+        pn: reversePn,
+        length: reverseResult.calculatedLength,
+        pricePerKg: reverseResult.unitPricePerKg,
+        packagingOptions: {
+          preferredType: reverseResult.packaging.packagingType,
+          branchLength: reverseResult.packaging.unitLength === 12 ? 12 : 6,
+          coilLength: reverseResult.packaging.unitLength,
+        },
+      },
+      weightTable
+    );
+
+    if (item) {
+      setItems((prev) => [...prev, item]);
+      notify(`لوله معکوس محاسبه‌شده (${reverseResult.calculatedLength} متر - ${reverseResult.packaging.labelPersian}) به پیش‌فاکتور افزوده شد.`);
+      setShowReversePanel(false);
+    }
+  };
+
+  // Apply suggested raw material cost price
+  const handleApplyCostPrice = () => {
+    if (costTargetForm === 'pipe') {
+      setPipePricePerKg(rawCostResult.suggestedPricePerKg);
+      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${settings.currencyUnit}) در فرم لوله درج شد.`);
+    } else {
+      setReversePricePerKg(rawCostResult.suggestedPricePerKg);
+      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${settings.currencyUnit}) در محاسبه معکوس درج شد.`);
+    }
+    setShowCostModal(false);
   };
 
   // Add Fitting Item handler
@@ -851,130 +1049,623 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
         {/* --- FORM 1: ADD PIPE --- */}
         {activeItemTab === 'pipe' && (
-          <form onSubmit={handleAddPipeItem} className="p-6 space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
-              {/* Grade */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">گرید لوله:</label>
-                <select
-                  value={pipeGrade}
-                  onChange={(e) => setPipeGrade(e.target.value as PipeGrade)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
-                >
-                  <option value="PE100">PE100</option>
-                  <option value="PE80">PE80</option>
-                  <option value="PE63">PE63</option>
-                </select>
+          <div className="p-6 space-y-6">
+            {/* Top Toolbar for PE Domain Capabilities */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-900/70 rounded-xl border border-slate-700/70">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-medium">ابزارهای تخصصی صنعت پلی‌اتیلن:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">DIN 8074/8075</span>
               </div>
 
-              {/* Diameter */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">قطر خارجی (mm):</label>
-                <select
-                  value={pipeDiameter}
-                  onChange={(e) => {
-                    const d = Number(e.target.value);
-                    setPipeDiameter(d);
-                    const sdrs = Object.keys(weightTable[d] || {}).map(Number);
-                    if (sdrs.length && !sdrs.includes(pipeSdr)) {
-                      setPipeSdr(sdrs[0]);
-                    }
+              <div className="flex items-center gap-2">
+                {/* Reverse Calculation Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowReversePanel((prev) => !prev)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                    showReversePanel
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
+                      : 'bg-slate-800 text-blue-400 hover:text-blue-300 border-slate-700 hover:border-slate-600'
+                  }`}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{showReversePanel ? 'بستن محاسبه معکوس' : 'محاسبه معکوس (تناژ / بودجه)'}</span>
+                </button>
+
+                {/* Raw Material Cost Calculator Modal */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCostTargetForm('pipe');
+                    setShowCostModal(true);
                   }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-slate-600 transition-all cursor-pointer"
                 >
-                  {availableDiameters.map((d) => (
-                    <option key={d} value={d}>
-                      {d} میلی‌متر
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* SDR */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">نسبت SDR:</label>
-                <select
-                  value={pipeSdr}
-                  onChange={(e) => setPipeSdr(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none"
-                >
-                  {availableSdrs.map((s) => (
-                    <option key={s} value={s}>
-                      SDR {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* PN (Auto-calculated) */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">فشار کاری (PN):</label>
-                <div className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-blue-400 font-mono font-bold">
-                  {pipePn} bar
-                </div>
-              </div>
-
-              {/* Length */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">طول لوله (متر):</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={pipeLength || ''}
-                  onChange={(e) => setPipeLength(Number(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-
-              {/* Price per Kg */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  قیمت هر کیلوگرم ({activeCurrency}):
-                </label>
-                <input
-                  type="number"
-                  value={pipePricePerKg || ''}
-                  onChange={(e) => setPipePricePerKg(Number(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold text-left focus:outline-none"
-                />
+                  <Factory className="w-3.5 h-3.5" />
+                  <span>آنالیز بورس کالا و هزینه تبدیل</span>
+                </button>
               </div>
             </div>
 
-            {/* Calculations Preview Bar */}
-            <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-700/70 flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-6">
-                <div>
-                  <span className="text-slate-400 block">وزن هر متر (DIN):</span>
-                  <strong className="text-slate-200 text-sm font-mono">
-                    {currentWpm ? `${currentWpm} kg/m` : 'نامعتبر'}
-                  </strong>
+            {/* --- REVERSE CALCULATION PANEL (TOGGLEABLE) --- */}
+            {showReversePanel && (
+              <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 p-5 rounded-2xl border-2 border-blue-500/50 shadow-xl space-y-5 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
+                      <RotateCcw className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">محاسبه‌گر معکوس متراژ لوله (Reverse Pipe Calculator)</h4>
+                      <p className="text-xs text-slate-400">تخمین متراژ مورد نیاز بر اساس تناژ درخواستی، وزن کل یا بودجه پروژه</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowReversePanel(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div>
-                  <span className="text-slate-400 block">وزن کل لوله:</span>
-                  <strong className="text-blue-400 text-sm font-mono">
-                    {formatNumber(currentPipeWeight)} کیلوگرم
-                  </strong>
+                {/* Mode Selector */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400 font-medium">مبنای محاسبه معکوس:</span>
+                  <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setReverseMode('tonnage')}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        reverseMode === 'tonnage'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      بر اساس وزن / تناژ کل
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReverseMode('budget')}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        reverseMode === 'budget'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      بر اساس بودجه کل پروژه
+                    </button>
+                  </div>
                 </div>
 
+                {/* Input Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
+                  {/* Target Input */}
+                  {reverseMode === 'tonnage' ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">وزن یا تناژ هدف:</label>
+                        <div className="flex text-[10px] gap-1 bg-slate-950 px-1 py-0.5 rounded border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setReverseWeightUnit('ton')}
+                            className={`px-1 rounded ${reverseWeightUnit === 'ton' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                          >
+                            تن
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReverseWeightUnit('kg')}
+                            className={`px-1 rounded ${reverseWeightUnit === 'kg' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                          >
+                            کیلوگرم
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="number"
+                        step="any"
+                        value={reverseTargetValue || ''}
+                        onChange={(e) => setReverseTargetValue(Number(e.target.value) || 0)}
+                        placeholder={reverseWeightUnit === 'ton' ? 'مثال: ۵ (تن)' : 'مثال: ۵۰۰۰ (کیلوگرم)'}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-slate-400 mb-1">بودجه کل پروژه ({settings.currencyUnit}):</label>
+                      <input
+                        type="number"
+                        value={reverseTargetValue || ''}
+                        onChange={(e) => setReverseTargetValue(Number(e.target.value) || 0)}
+                        placeholder="مثال: ۵۰,۰۰۰,۰۰۰"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-blue-500 font-bold"
+                      />
+                    </div>
+                  )}
+
+                  {/* Reverse Grade */}
+                  <div>
+                    <label className="block text-slate-400 mb-1">گرید لوله:</label>
+                    <select
+                      value={reverseGrade}
+                      onChange={(e) => setReverseGrade(e.target.value as PipeGrade)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
+                    >
+                      <option value="PE100">PE100</option>
+                      <option value="PE80">PE80</option>
+                      <option value="PE63">PE63</option>
+                    </select>
+                  </div>
+
+                  {/* Reverse Diameter */}
+                  <div>
+                    <label className="block text-slate-400 mb-1">قطر خارجی (mm):</label>
+                    <select
+                      value={reverseDiameter}
+                      onChange={(e) => {
+                        const d = Number(e.target.value);
+                        setReverseDiameter(d);
+                        const sdrs = Object.keys(weightTable[d] || {}).map(Number);
+                        if (sdrs.length && !sdrs.includes(reverseSdr)) {
+                          setReverseSdr(sdrs[0]);
+                        }
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
+                    >
+                      {availableDiameters.map((d) => (
+                        <option key={d} value={d}>
+                          {d} میلی‌متر
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reverse SDR */}
+                  <div>
+                    <label className="block text-slate-400 mb-1">نسبت SDR:</label>
+                    <select
+                      value={reverseSdr}
+                      onChange={(e) => setReverseSdr(Number(e.target.value))}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none"
+                    >
+                      {reverseAvailableSdrs.map((s) => (
+                        <option key={s} value={s}>
+                          SDR {s} ({gradeSdrPn?.[reverseGrade]?.[s] ? `${gradeSdrPn[reverseGrade][s]} bar` : ''})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reverse Price/Kg */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-slate-400">قیمت هر کیلو ({settings.currencyUnit}):</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCostTargetForm('reverse');
+                          setShowCostModal(true);
+                        }}
+                        className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        آنالیز بورس
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={reversePricePerKg || ''}
+                      onChange={(e) => setReversePricePerKg(Number(e.target.value) || 0)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold text-left focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Packaging Mode in Reverse */}
+                <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-300 font-medium">نحوه بسته‌بندی در محاسبه معکوس:</span>
+                    {isCoilAllowed(reverseDiameter) ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setReversePackagingType('coil')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                            reversePackagingType === 'coil'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          کلاف (Coil)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReversePackagingType('branch')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                            reversePackagingType === 'branch'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          شاخه مستقیم
+                        </button>
+
+                        {reversePackagingType === 'branch' ? (
+                          <div className="flex items-center gap-1 text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-700 font-mono">
+                            <span className="text-slate-400">طول شاخه:</span>
+                            <button
+                              type="button"
+                              onClick={() => setReverseBranchLength(6)}
+                              className={`px-1.5 rounded ${reverseBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                            >
+                              ۶ متری
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setReverseBranchLength(12)}
+                              className={`px-1.5 rounded ${reverseBranchLength === 12 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                            >
+                              ۱۲ متری
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-700 font-mono">
+                            <span className="text-slate-400">متراژ هر کلاف:</span>
+                            <select
+                              value={reverseCoilLength}
+                              onChange={(e) => setReverseCoilLength(Number(e.target.value))}
+                              className="bg-transparent text-blue-300 font-bold focus:outline-none"
+                            >
+                              <option value="50">۵۰ متری</option>
+                              <option value="100">۱۰۰ متری</option>
+                              <option value="150">۱۵۰ متری</option>
+                              <option value="200">۲۰۰ متری</option>
+                              <option value="400">۴۰۰ متری</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400 text-[11px] flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          سایز {reverseDiameter}mm الزماً شاخه مستقیم است (کلاف غیرمجاز است)
+                        </span>
+                        <div className="flex items-center gap-1 text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-700 font-mono">
+                          <button
+                            type="button"
+                            onClick={() => setReverseBranchLength(6)}
+                            className={`px-2 py-0.5 rounded ${reverseBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۶ متری
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReverseBranchLength(12)}
+                            className={`px-2 py-0.5 rounded ${reverseBranchLength === 12 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۱۲ متری
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Calculation Output Card */}
+                {reverseResult ? (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs flex-1">
+                      <div>
+                        <span className="text-slate-400 block">وزن هر متر (DIN):</span>
+                        <strong className="text-slate-200 text-sm font-mono">{reverseResult.weightPerMeter} kg/m</strong>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">متراژ دقیق حاصله:</span>
+                        <strong className="text-blue-400 text-base font-mono font-bold">
+                          {formatNumber(reverseResult.calculatedLength)} متر
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">وزن کل نهایی:</span>
+                        <strong className="text-slate-200 text-sm font-mono">
+                          {formatNumber(reverseResult.totalWeightKg)} kg ({toPersianDigits(reverseResult.totalTonnage)} تن)
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">بسته‌بندی پیشنهادی:</span>
+                        <strong className="text-amber-300 text-sm font-mono block">
+                          {reverseResult.packaging.labelPersian}
+                        </strong>
+                        {reverseResult.packaging.wasteOrSurplusMeters > 0 && (
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            ({toPersianDigits(reverseResult.packaging.wasteOrSurplusMeters)}م مازاد)
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">مبلغ کل این ردیف:</span>
+                        <strong className="text-emerald-400 text-base font-bold font-mono">
+                          {formatPrice(reverseResult.totalPrice, settings.currencyUnit)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleInsertReverseItem}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>افزودن این لوله به پیش‌فاکتور</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl text-xs text-center">
+                    لطفاً مقادیر معتبر برای محاسبه معکوس متراژ وارد کنید.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Standard Pipe Calculation Form */}
+            <form onSubmit={handleAddPipeItem} className="space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+                {/* Grade */}
                 <div>
-                  <span className="text-slate-400 block">قیمت کل این ردیف:</span>
-                  <strong className="text-emerald-400 text-base font-bold font-mono">
-                    {formatPrice(currentPipeTotalPrice, activeCurrency)}
-                  </strong>
+                  <label className="block text-xs text-slate-400 mb-1">گرید لوله:</label>
+                  <select
+                    value={pipeGrade}
+                    onChange={(e) => setPipeGrade(e.target.value as PipeGrade)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
+                  >
+                    <option value="PE100">PE100</option>
+                    <option value="PE80">PE80</option>
+                    <option value="PE63">PE63</option>
+                  </select>
+                </div>
+
+                {/* Diameter */}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">قطر خارجی (mm):</label>
+                  <select
+                    value={pipeDiameter}
+                    onChange={(e) => {
+                      const d = Number(e.target.value);
+                      setPipeDiameter(d);
+                      const sdrs = Object.keys(weightTable[d] || {}).map(Number);
+                      if (sdrs.length && !sdrs.includes(pipeSdr)) {
+                        setPipeSdr(sdrs[0]);
+                      }
+                    }}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
+                  >
+                    {availableDiameters.map((d) => (
+                      <option key={d} value={d}>
+                        {d} میلی‌متر
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* SDR */}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">نسبت SDR:</label>
+                  <select
+                    value={pipeSdr}
+                    onChange={(e) => setPipeSdr(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none"
+                  >
+                    {availableSdrs.map((s) => (
+                      <option key={s} value={s}>
+                        SDR {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* PN (Auto-calculated) */}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">فشار کاری (PN):</label>
+                  <div className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-3 py-2 text-blue-400 font-mono font-bold">
+                    {pipePn} bar
+                  </div>
+                </div>
+
+                {/* Length */}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">طول لوله (متر):</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={pipeLength || ''}
+                    onChange={(e) => setPipeLength(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none"
+                  />
+                </div>
+
+                {/* Price per Kg */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-slate-400">
+                      قیمت هر کیلو ({activeCurrency}):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCostTargetForm('pipe');
+                        setShowCostModal(true);
+                      }}
+                      className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      آنالیز بورس
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    value={pipePricePerKg || ''}
+                    onChange={(e) => setPipePricePerKg(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold text-left focus:outline-none"
+                  />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={!currentWpm || pipeLength <= 0}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-              >
-                <Plus className="w-5 h-5" />
-                <span>افزودن این لوله به پیش‌فاکتور</span>
-              </button>
-            </div>
-          </form>
+              {/* Packaging Rule Section (Coil vs Branch) */}
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-blue-400" />
+                    <span className="font-bold text-white">شیوه بسته‌بندی و تحویل کالا:</span>
+                  </div>
+
+                  {isCoilAllowed(pipeDiameter) ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPipePackagingType('coil')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          pipePackagingType === 'coil'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        کلاف (Coil)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPipePackagingType('branch')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          pipePackagingType === 'branch'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        شاخه مستقیم
+                      </button>
+
+                      {pipePackagingType === 'branch' ? (
+                        <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
+                          <span className="text-slate-400">طول شاخه:</span>
+                          <button
+                            type="button"
+                            onClick={() => setPipeBranchLength(6)}
+                            className={`px-2 py-0.5 rounded ${pipeBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۶ متری
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPipeBranchLength(12)}
+                            className={`px-2 py-0.5 rounded ${pipeBranchLength === 12 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۱۲ متری
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
+                          <span className="text-slate-400">متراژ هر کلاف:</span>
+                          <select
+                            value={pipeCoilLength}
+                            onChange={(e) => setPipeCoilLength(Number(e.target.value))}
+                            className="bg-transparent text-blue-300 font-bold focus:outline-none"
+                          >
+                            <option value="50">۵۰ متری</option>
+                            <option value="100">۱۰۰ متری</option>
+                            <option value="150">۱۵۰ متری</option>
+                            <option value="200">۲۰۰ متری</option>
+                            <option value="400">۴۰۰ متری</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>قطر {pipeDiameter}mm: کلاف‌پیچی غیرمجاز است (الزام شاخه مستقیم ۶ یا ۱۲ متری)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setPipeBranchLength(6)}
+                          className={`px-2.5 py-0.5 rounded ${pipeBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                        >
+                          ۶ متری
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPipeBranchLength(12)}
+                          className={`px-2.5 py-0.5 rounded ${pipeBranchLength === 12 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                        >
+                          ۱۲ متری
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Packaging preview text */}
+                <div className="text-xs text-slate-300 flex items-center justify-between pt-1 border-t border-slate-800">
+                  <span>
+                    واحد بسته‌بندی محاسباتی: <strong className="text-blue-300 font-mono">{currentPackaging.labelPersian}</strong>
+                  </span>
+                  {currentPackaging.wasteOrSurplusMeters > 0 && (
+                    <span className="text-amber-400 font-mono text-[11px]">
+                      (شامل {toPersianDigits(currentPackaging.wasteOrSurplusMeters)} متر سرجمع اضافه متراژ ناشی از برش استاندارد)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Calculations Preview Bar */}
+              <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-700/70 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div>
+                    <span className="text-slate-400 block">وزن هر متر (DIN):</span>
+                    <strong className="text-slate-200 text-sm font-mono">
+                      {currentWpm ? `${currentWpm} kg/m` : 'نامعتبر'}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block">وزن کل لوله:</span>
+                    <strong className="text-blue-400 text-sm font-mono">
+                      {formatNumber(currentPipeWeight)} کیلوگرم
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block">بسته‌بندی:</span>
+                    <strong className="text-amber-300 text-sm font-mono">
+                      {currentPackaging.labelPersian}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block">قیمت کل این ردیف:</span>
+                    <strong className="text-emerald-400 text-base font-bold font-mono">
+                      {formatPrice(currentPipeTotalPrice, activeCurrency)}
+                    </strong>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!currentWpm || pipeLength <= 0}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>افزودن این لوله به پیش‌فاکتور</span>
+                </button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* --- FORM 2: ADD FITTING --- */}
@@ -1178,10 +1869,25 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                       <td className="py-3 px-4">
                         {isPipe ? (
                           <div>
-                            <span className="font-bold text-white">لوله قطر {item.diameter} mm</span>
-                            <span className="text-slate-400 text-xs mr-2">
-                              (گرید {item.peGrade} | SDR {item.sdr} | PN {item.pn})
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white">لوله قطر {item.diameter} mm</span>
+                              <span className="text-slate-400 text-xs">
+                                (گرید {item.peGrade} | SDR {item.sdr} | PN {item.pn})
+                              </span>
+                            </div>
+                            {item.packaging && (
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700/80 text-blue-300 font-mono">
+                                  <Package className="w-3 h-3 text-blue-400" />
+                                  <span>{item.packaging.labelPersian}</span>
+                                </span>
+                                {item.packaging.wasteOrSurplusMeters > 0 && (
+                                  <span className="text-[10px] text-amber-400 font-mono">
+                                    ({toPersianDigits(item.packaging.wasteOrSurplusMeters)}م مازاد)
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div>
@@ -1298,23 +2004,84 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
       {/* BOTTOM: Summary & Financial Adjustments */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Notes & Explanations */}
-        <div className="lg:col-span-2 bg-slate-800/80 p-6 rounded-2xl border border-slate-700 space-y-4">
-          <label className="block text-sm font-bold text-white">توضیحات و شرایط پیش‌فاکتور (اختیاری):</label>
-          <textarea
-            rows={4}
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            placeholder="مثال: هزینه حمل و نقل به عهده خریدار می‌باشد. تحویل کالا ظرف مدت ۵ روز کاری از زمان واریز پیش‌پرداخت..."
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
+        {/* Notes & Explanations & Logistics */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 space-y-4">
+            <label className="block text-sm font-bold text-white">توضیحات و شرایط پیش‌فاکتور (اختیاری):</label>
+            <textarea
+              rows={3}
+              value={explanation}
+              onChange={(e) => setExplanation(e.target.value)}
+              placeholder="مثال: هزینه حمل و نقل به عهده خریدار می‌باشد. تحویل کالا ظرف مدت ۵ روز کاری از زمان واریز پیش‌پرداخت..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
 
-          {summary.totalAmount > 0 && (
-            <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 text-xs space-y-1">
-              <span className="text-slate-400 block font-medium">مبلغ نهایی فاکتور به حروف:</span>
-              <strong className="text-blue-300 text-sm block">
-                {numberToPersianWords(summary.totalAmount)} {activeCurrency}
-              </strong>
+            {summary.totalAmount > 0 && (
+              <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 text-xs space-y-1">
+                <span className="text-slate-400 block font-medium">مبلغ نهایی فاکتور به حروف:</span>
+                <strong className="text-blue-300 text-sm block">
+                  {numberToPersianWords(summary.totalAmount)} {activeCurrency}
+                </strong>
+              </div>
+            )}
+          </div>
+
+          {/* Freight Logistics Estimator Card */}
+          {summary.totalPipeWeight > 0 && summary.freight && (
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 p-5 rounded-2xl border border-blue-500/30 space-y-3.5 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <Truck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-400 block font-medium">برآورد ناوگان لجستیک و حمل (استاندارد ایران):</span>
+                    <strong className="text-white text-base font-bold flex items-center gap-2">
+                      <span>
+                        {summary.freight.vehicleCount > 1 ? `${toPersianDigits(summary.freight.vehicleCount)} دستگاه ` : ''}
+                        {summary.freight.vehicle.nameFa}
+                      </span>
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    ضریب بار: {toPersianDigits(summary.freight.utilizationPercentage)}٪
+                  </span>
+                </div>
+              </div>
+
+              {/* Capacity meter */}
+              <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-700/60">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    summary.freight.utilizationPercentage > 95
+                      ? 'bg-rose-500'
+                      : summary.freight.utilizationPercentage > 80
+                      ? 'bg-amber-400'
+                      : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.min(100, summary.freight.utilizationPercentage)}%` }}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-700/60 gap-2">
+                <span>
+                  وزن کل لوله‌ها: <strong className="text-blue-400 font-mono">{formatNumber(summary.totalPipeWeight)} کیلوگرم</strong> ({toPersianDigits((summary.totalPipeWeight / 1000).toFixed(2))} تن)
+                </span>
+                {summary.freight.isLengthConstrained && (
+                  <span className="text-amber-400 text-xs font-medium flex items-center gap-1 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/20">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    الزام طول بارگیر به دلیل شاخه مستقیم {toPersianDigits(summary.maxBranchLengthMeters)} متری
+                  </span>
+                )}
+              </div>
+
+              <div className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <span>{summary.freight.recommendationNote}</span>
+              </div>
             </div>
           )}
         </div>
@@ -1332,6 +2099,20 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <span>جمع اقلام:</span>
               <span className="font-mono font-bold">{formatNumber(summary.subtotal)}</span>
             </div>
+
+            {/* Recommended Freight Tag in Financial Box */}
+            {summary.totalPipeWeight > 0 && summary.freight && (
+              <div className="flex justify-between items-center text-xs text-slate-400 pt-1 pb-1">
+                <span className="flex items-center gap-1">
+                  <Truck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>ناوگان حمل پیشنهادی:</span>
+                </span>
+                <span className="font-medium text-blue-300">
+                  {summary.freight.vehicleCount > 1 ? `${toPersianDigits(summary.freight.vehicleCount)} × ` : ''}
+                  {summary.freight.vehicle.nameFa}
+                </span>
+              </div>
+            )}
 
             {/* Discount Option */}
             <div className="pt-2 border-t border-slate-700/60 space-y-2">
@@ -1443,6 +2224,153 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           </div>
         </div>
       </div>
+
+      {/* --- MODAL: RAW MATERIAL COST CALCULATOR (بورس کالا و هزینه تبدیل) --- */}
+      {showCostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <Factory className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">محاسبه‌گر بهای تمام‌شده و نرخ‌گذاری بورس کالا</h3>
+                  <p className="text-xs text-slate-400">فرمول صنعتی محاسبه نرخ هر کیلوگرم لوله پلی‌اتیلن بر اساس بورس کالا (IME)</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCostModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Inputs Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">قیمت پایه پلیمر بورس کالا ({settings.currencyUnit}/kg):</label>
+                <input
+                  type="number"
+                  value={rawPolymerPrice || ''}
+                  onChange={(e) => setRawPolymerPrice(Number(e.target.value) || 0)}
+                  placeholder="مثال: ۸۵۰۰۰"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">درصد مستربچ دوده (Carbon Black %):</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={rawMasterbatchPct}
+                  onChange={(e) => setRawMasterbatchPct(Number(e.target.value) || 0)}
+                  placeholder="پیش‌فرض: ۲.۰٪ (پلیمر خودرنگ ۰)"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">قیمت هر کیلو مستربچ دوده ({settings.currencyUnit}/kg):</label>
+                <input
+                  type="number"
+                  value={rawMasterbatchPrice || ''}
+                  onChange={(e) => setRawMasterbatchPrice(Number(e.target.value) || 0)}
+                  placeholder="مثال: ۱۳۰۰۰۰"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">درصد افت و ضایعات تولید (Waste %):</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={rawWastePct}
+                  onChange={(e) => setRawWastePct(Number(e.target.value) || 0)}
+                  placeholder="پیش‌فرض: ۱.۵٪"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">هزینه تبدیل و سربار کارخانه ({settings.currencyUnit}/kg):</label>
+                <input
+                  type="number"
+                  value={rawConversionCost || ''}
+                  onChange={(e) => setRawConversionCost(Number(e.target.value) || 0)}
+                  placeholder="برق، استهلاک خط، دستمزد، بسته‌بندی (مثال: ۱۰۰۰۰)"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">درصد حاشیه سود تولیدکننده (Margin %):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={rawProfitMarginPct}
+                  onChange={(e) => setRawProfitMarginPct(Number(e.target.value) || 0)}
+                  placeholder="پیش‌فرض: ۱۰٪"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-left focus:outline-none focus:border-emerald-500 font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Live Cost Breakdown */}
+            <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>بهای مواد اولیه با احتساب دوده:</span>
+                <span className="font-mono text-slate-200">{formatNumber(rawCostResult.baseMaterialCostPerKg)} {settings.currencyUnit}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>هزینه افت ضایعات خط اکسترودر:</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.wasteCostPerKg)} {settings.currencyUnit}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>هزینه تبدیل، برق و سربار تولید:</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.conversionCostPerKg)} {settings.currencyUnit}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-300 font-semibold pt-1 border-t border-slate-800">
+                <span>بهای تمام‌شده تولید (Production Cost):</span>
+                <span className="font-mono text-blue-300">{formatNumber(rawCostResult.productionCostPerKg)} {settings.currencyUnit}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>سود ناخالص تولیدکننده:</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.profitAmountPerKg)} {settings.currencyUnit}</span>
+              </div>
+              <div className="flex justify-between items-center text-white font-bold text-sm pt-2 border-t-2 border-slate-800">
+                <span>نرخ فروش پیشنهادی هر کیلوگرم:</span>
+                <span className="font-mono text-emerald-400 text-base">{formatNumber(rawCostResult.suggestedPricePerKg)} {settings.currencyUnit}</span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCostModal(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              >
+                انصراف
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyCostPrice}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>اعمال این نرخ ({formatNumber(rawCostResult.suggestedPricePerKg)} {settings.currencyUnit})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
