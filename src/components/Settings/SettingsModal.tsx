@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Save, RotateCcw, Download, Upload, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, RotateCcw, Download, Upload, Building2, HardDrive, RefreshCw } from 'lucide-react';
 import { CompanySettings } from '../../types';
 import { StorageService } from '../../services/storage';
+import { formatBackupSize } from '../../services/backupUtils';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,75 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<CompanySettings>(settings);
   const [saveNotice, setSaveNotice] = useState(false);
+  const [desktopBackups, setDesktopBackups] = useState<Array<{ filename: string; filePath: string; size: number; createdAt: string }>>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
+  const [backupMessage, setBackupMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+
+  const loadDesktopBackups = async () => {
+    if (typeof window !== 'undefined' && window.electronAPI?.listBackups) {
+      setIsLoadingBackups(true);
+      try {
+        const res = await window.electronAPI.listBackups();
+        if (res.success && res.backups) {
+          setDesktopBackups(res.backups);
+        } else if (res.success && res.files) {
+          const mapped = res.files.map((f: any) =>
+            typeof f === 'string' ? { filename: f, filePath: f, size: 0, createdAt: '' } : f
+          );
+          setDesktopBackups(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to list backups:', err);
+      } finally {
+        setIsLoadingBackups(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(settings);
+      loadDesktopBackups();
+    }
+  }, [isOpen, settings]);
+
+  const handleRestoreDesktopBackup = async (filename: string) => {
+    if (!confirm(`آیا از بازیابی نسخه پشتیبان «${filename}» اطمینان دارید؟ داده‌های فعلی نرم‌افزار جایگزین خواهند شد.`)) {
+      return;
+    }
+    if (window.electronAPI?.loadBackup) {
+      try {
+        const res = await window.electronAPI.loadBackup({ filename });
+        if (res.success && res.content) {
+          const ok = StorageService.restoreFromBackup(res.content);
+          if (ok) {
+            setBackupMessage({ text: `نسخه پشتیبان «${filename}» با موفقیت بازیابی شد.` });
+            onRefreshAllData();
+            setTimeout(() => setBackupMessage(null), 3500);
+          } else {
+            setBackupMessage({ text: 'خطا در محتوای نسخه پشتیبان.', isError: true });
+          }
+        } else {
+          setBackupMessage({ text: res.error || 'خطا در بارگذاری فایل پشتیبان', isError: true });
+        }
+      } catch (err) {
+        setBackupMessage({ text: 'خطا در بازیابی نسخه پشتیبان.', isError: true });
+      }
+    }
+  };
+
+  const handleCreateSnapshot = async () => {
+    if (window.electronAPI?.saveBackup) {
+      const ok = await StorageService.triggerDiskBackup();
+      if (ok) {
+        setBackupMessage({ text: 'نسخه پشتیبان جدید با موفقیت روی دیسک ایجاد شد.' });
+        await loadDesktopBackups();
+        setTimeout(() => setBackupMessage(null), 3000);
+      } else {
+        setBackupMessage({ text: 'خطا در ایجاد نسخه پشتیبان روی دیسک.', isError: true });
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -224,6 +294,99 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <RotateCcw className="w-4 h-4" />
                 <span>بازنشانی به حالت کارخانه</span>
               </button>
+            </div>
+
+            {/* Automated Desktop Backups (R4) */}
+            <div className="mt-4 pt-4 border-t border-slate-700/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-blue-400 flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-blue-400" />
+                    <span>نسخه‌های پشتیبان خودکار دسکتاپ</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    ذخیره‌سازی ایمن روی دیسک با نگهداری خودکار ۲۰ نسخه اخیر
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadDesktopBackups}
+                    disabled={isLoadingBackups}
+                    className="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
+                    title="بروزرسانی فهرست پشتیبان‌ها"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBackups ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateSnapshot}
+                    className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    + ذخیره فوری
+                  </button>
+                </div>
+              </div>
+
+              {backupMessage && (
+                <div
+                  className={`p-2 rounded-xl text-xs font-medium ${
+                    backupMessage.isError
+                      ? 'bg-rose-900/40 text-rose-300 border border-rose-700/50'
+                      : 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50'
+                  }`}
+                >
+                  {backupMessage.text}
+                </div>
+              )}
+
+              {desktopBackups.length > 0 ? (
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1 border border-slate-700/60 rounded-xl p-2 bg-slate-900/40">
+                  {desktopBackups.map((b) => (
+                    <div
+                      key={b.filename}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/50 text-xs transition-colors"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-slate-200 text-[11px] dir-ltr text-right">
+                          {b.filename}
+                        </span>
+                        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                          <span>حجم: {formatBackupSize(b.size)}</span>
+                          {b.createdAt && (
+                            <span>
+                              تاریخ:{' '}
+                              {new Date(b.createdAt).toLocaleDateString('fa-IR', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreDesktopBackup(b.filename)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg font-medium transition-colors cursor-pointer text-xs"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>بازیابی</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-3 px-2 bg-slate-900/30 border border-slate-700/40 rounded-xl text-xs text-slate-400">
+                  {typeof window !== 'undefined' && window.electronAPI
+                    ? 'هنوز نسخه پشتیبان خودکاری روی دیسک ایجاد نشده است.'
+                    : 'نسخه‌های پشتیبان خودکار دسکتاپ در محیط دسکتاپ (Electron) فعال خواهند بود.'}
+                </div>
+              )}
             </div>
           </div>
 
