@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar, NavTab } from './components/Navbar';
 import { InvoiceBuilder } from './components/InvoiceBuilder/InvoiceBuilder';
 import { PriceManager } from './components/PriceManager/PriceManager';
+import { CustomerManager } from './components/CustomerManager/CustomerManager';
 import { InvoiceHistory } from './components/InvoiceHistory/InvoiceHistory';
 import { InvoicePrintView } from './components/InvoicePrint/InvoicePrintView';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -63,6 +64,38 @@ export const App: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
     setEditingSession({ invoice: duplicated, isDuplicate: true });
+    setActiveTab('builder');
+  };
+
+  const handleStartInvoiceForCustomer = (cust: Customer) => {
+    const freshSettings = StorageService.getSettings();
+    const nextInvoiceNum = String((freshSettings.invoiceCounter || 1) + 1);
+    const hasDefaultPct =
+      typeof cust.defaultDiscount === 'number' && cust.defaultDiscount > 0 && cust.defaultDiscount <= 100;
+    const hasDefaultFixed =
+      typeof cust.defaultDiscount === 'number' && cust.defaultDiscount > 100;
+    const isOfficialCustomer = Boolean(cust.nationalId || cust.economicCode);
+
+    StorageService.saveDraft({
+      invoiceNumber: nextInvoiceNum,
+      jalaliDate: getCurrentJalaliDate(),
+      customerName: cust.name,
+      customerPhone: cust.phone || '',
+      customerAddress: cust.address || '',
+      customerNationalId: cust.nationalId || '',
+      customerEconomicCode: cust.economicCode || '',
+      customerPostalCode: cust.postalCode || '',
+      isOfficial: isOfficialCustomer,
+      explanation: '',
+      items: [],
+      includeDiscount: hasDefaultPct,
+      discountPercentage: hasDefaultPct ? cust.defaultDiscount : 0,
+      includeCustomDiscount: hasDefaultFixed,
+      customDiscountAmount: hasDefaultFixed ? cust.defaultDiscount : 0,
+      includeTax: isOfficialCustomer,
+      taxPercentage: freshSettings.taxRate || 10,
+    });
+    setEditingSession(null);
     setActiveTab('builder');
   };
 
@@ -132,6 +165,7 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
         currencyUnit={settings.currencyUnit}
+        customerCount={customers.length}
       />
 
       {/* Main Content Area */}
@@ -165,8 +199,19 @@ export const App: React.FC = () => {
             onUpdateFittings={setFittings}
             discounts={discounts}
             onUpdateDiscounts={setDiscounts}
+          />
+        )}
+
+        {activeTab === 'customers' && (
+          <CustomerManager
             customers={customers}
             onUpdateCustomers={setCustomers}
+            invoices={invoices}
+            settings={settings}
+            onStartInvoiceForCustomer={handleStartInvoiceForCustomer}
+            onPreviewPrintInvoice={(inv) => setPreviewInvoice(inv)}
+            onEditInvoice={handleEditInvoice}
+            onDuplicateInvoice={handleDuplicateInvoice}
           />
         )}
 

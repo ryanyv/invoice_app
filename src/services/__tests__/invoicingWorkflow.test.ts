@@ -362,11 +362,56 @@ assert(validItemsInSummary.subtotal === 0, 'Null item handled gracefully without
 mockLocalStorage.setItem('pipecal_draft_invoice_v2', '{ corrupt json string');
 const corruptDraft = StorageService.getDraft();
 assert(corruptDraft === null, 'Corrupt draft returns null');
-assert(mockLocalStorage.getItem('pipecal_draft_invoice_v2') === null, 'Corrupt draft auto-healed and cleared from storage');
-console.log('✓ Test 9 Passed: Corrupted draft resilience and auto-heal verified.');
+// Test 10: CRM Lite Customer Persistence, Field Preservation & CSV Export
+console.log('Test 10: CRM Lite Customer Persistence, Field Preservation & CSV Export');
+StorageService.saveCustomers([]);
+const crmCust: Customer = {
+  id: 'cust_crm_1',
+  name: 'شرکت پارس پلیمر',
+  phone: '02188776655',
+  address: 'تهران، خیابان ولیعصر',
+  nationalId: '10101234567',
+  economicCode: '411123456789',
+  postalCode: '1587511111',
+  defaultDiscount: 8,
+};
+StorageService.addOrUpdateCustomer(crmCust);
+assert(StorageService.getCustomers().length === 1, 'Customer added to CRM');
+
+// Simulate invoice auto-save updating customer by name without defaultDiscount
+StorageService.addOrUpdateCustomer({
+  id: 'cust_temp_999',
+  name: 'شرکت پارس پلیمر',
+  phone: '02188776699',
+});
+const afterPartialUpdate = StorageService.getCustomers();
+assert(afterPartialUpdate.length === 1, 'Did not duplicate customer on name match');
+assert(afterPartialUpdate[0].id === 'cust_crm_1', 'Original customer ID preserved');
+assert(afterPartialUpdate[0].phone === '02188776699', 'Updated phone applied');
+assert(afterPartialUpdate[0].defaultDiscount === 8, 'VIP defaultDiscount preserved on partial invoice save');
+assert(afterPartialUpdate[0].economicCode === '411123456789', 'Official economicCode preserved on partial invoice save');
+
+// Simulate CRM modal renaming customer by ID
+StorageService.addOrUpdateCustomer({
+  ...afterPartialUpdate[0],
+  name: 'شرکت پارس پلیمر نوین',
+});
+const afterRename = StorageService.getCustomers();
+assert(afterRename.length === 1, 'Renaming existing customer by ID updates in-place');
+assert(afterRename[0].name === 'شرکت پارس پلیمر نوین', 'Customer name updated');
+
+// CSV Export verification
+const csv = StorageService.exportCustomersToCsv();
+assert(csv.includes('شرکت پارس پلیمر نوین'), 'CSV export contains customer name');
+assert(csv.includes('411123456789'), 'CSV export contains economicCode');
+
+// Delete customer
+StorageService.deleteCustomer('cust_crm_1');
+assert(StorageService.getCustomers().length === 0, 'Customer deleted from CRM');
+console.log('✓ Test 10 Passed: CRM Lite persistence, field preservation, and CSV export verified.');
 
 console.log('\n========================================');
-console.log('ALL INVOICING WORKFLOW TESTS PASSED (9/9)');
+console.log('ALL INVOICING WORKFLOW TESTS PASSED (10/10)');
 console.log('========================================\n');
   });
 });

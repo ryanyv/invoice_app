@@ -164,13 +164,67 @@ export class StorageService {
 
   static addOrUpdateCustomer(customer: Customer): void {
     const list = this.getCustomers();
-    const idx = list.findIndex((c) => c.name.trim() === customer.name.trim());
+    const idx = list.findIndex(
+      (c) =>
+        (customer.id && c.id === customer.id) ||
+        c.name.trim().toLowerCase() === customer.name.trim().toLowerCase()
+    );
     if (idx !== -1) {
-      list[idx] = { ...list[idx], ...customer };
+      const existing = list[idx];
+      list[idx] = {
+        ...existing,
+        id: existing.id,
+        name: customer.name.trim(),
+        phone: customer.phone !== undefined ? customer.phone : existing.phone,
+        address: customer.address !== undefined ? customer.address : existing.address,
+        nationalId: customer.nationalId !== undefined ? customer.nationalId : existing.nationalId,
+        economicCode: customer.economicCode !== undefined ? customer.economicCode : existing.economicCode,
+        postalCode: customer.postalCode !== undefined ? customer.postalCode : existing.postalCode,
+        defaultDiscount:
+          customer.defaultDiscount !== undefined ? customer.defaultDiscount : existing.defaultDiscount,
+      };
     } else {
-      list.push(customer);
+      list.push({
+        ...customer,
+        id: customer.id || 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        name: customer.name.trim(),
+      });
     }
     this.saveCustomers(list);
+  }
+
+  static deleteCustomer(id: string): void {
+    const list = this.getCustomers().filter((c) => c.id !== id);
+    this.saveCustomers(list);
+  }
+
+  static exportCustomersToCsv(): string {
+    const customers = this.getCustomers();
+    const headers = [
+      'شناسه',
+      'نام مشتری / شرکت',
+      'تلفن تماس',
+      'کد اقتصادی (ماده ۱۶۹)',
+      'شناسه ملی / کد ملی',
+      'کد پستی',
+      'تخفیف پیش‌فرض',
+      'نشانی کامل',
+    ];
+    const escapeCell = (val: string | number | undefined) => {
+      if (val === undefined || val === null) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+    const rows = customers.map((c) => [
+      escapeCell(c.id),
+      escapeCell(c.name),
+      escapeCell(c.phone || ''),
+      escapeCell(c.economicCode || ''),
+      escapeCell(c.nationalId || ''),
+      escapeCell(c.postalCode || ''),
+      c.defaultDiscount || 0,
+      escapeCell(c.address || ''),
+    ]);
+    return '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   }
 
   // --- Invoices History ---

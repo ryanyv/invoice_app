@@ -15,12 +15,11 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
-  Users,
 } from 'lucide-react';
-import { CompanySettings, Customer, DiscountRule, FittingCatalogItem, PipeGrade } from '../../types';
+import { CompanySettings, DiscountRule, FittingCatalogItem, PipeGrade } from '../../types';
 import { StorageService } from '../../services/storage';
 import { MarketPriceService } from '../../services/marketPriceService';
-import { formatNumber, formatPrice, toPersianDigits } from '../../services/persianUtils';
+import { formatNumber, toPersianDigits } from '../../services/persianUtils';
 
 interface PriceManagerProps {
   settings: CompanySettings;
@@ -29,8 +28,6 @@ interface PriceManagerProps {
   onUpdateFittings: (fittings: FittingCatalogItem[]) => void;
   discounts: DiscountRule[];
   onUpdateDiscounts: (discounts: DiscountRule[]) => void;
-  customers?: Customer[];
-  onUpdateCustomers?: (customers: Customer[]) => void;
 }
 
 export const PriceManager: React.FC<PriceManagerProps> = ({
@@ -40,10 +37,8 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
   onUpdateFittings,
   discounts,
   onUpdateDiscounts,
-  customers = [],
-  onUpdateCustomers,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'pipes' | 'fittings' | 'discounts' | 'customers'>('fittings');
+  const [activeSubTab, setActiveSubTab] = useState<'pipes' | 'fittings' | 'discounts'>('fittings');
 
   // Pipe prices state
   const [pipePrices, setPipePrices] = useState<Record<PipeGrade, number>>(() => ({
@@ -270,51 +265,6 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
     showToast('کالای جدید به کاتالوگ افزوده شد.');
   };
 
-  // Customer form state
-  const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
-    name: '',
-    phone: '',
-    address: '',
-    economicCode: '',
-    nationalId: '',
-    postalCode: '',
-    defaultDiscount: 0,
-  });
-
-  const handleSaveCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustomer.name?.trim()) return;
-    const cust: Customer = {
-      id: 'cust_' + Date.now(),
-      name: newCustomer.name.trim(),
-      phone: newCustomer.phone?.trim() || undefined,
-      address: newCustomer.address?.trim() || undefined,
-      economicCode: newCustomer.economicCode?.trim() || undefined,
-      nationalId: newCustomer.nationalId?.trim() || undefined,
-      postalCode: newCustomer.postalCode?.trim() || undefined,
-      defaultDiscount: Number(newCustomer.defaultDiscount) || 0,
-    };
-    StorageService.addOrUpdateCustomer(cust);
-    onUpdateCustomers?.(StorageService.getCustomers());
-    setNewCustomer({
-      name: '',
-      phone: '',
-      address: '',
-      economicCode: '',
-      nationalId: '',
-      postalCode: '',
-      defaultDiscount: 0,
-    });
-    showToast('اطلاعات مشتری با موفقیت ذخیره شد.');
-  };
-
-  const handleDeleteCustomer = (id: string) => {
-    const updated = customers.filter((c) => c.id !== id);
-    StorageService.saveCustomers(updated);
-    onUpdateCustomers?.(updated);
-    showToast('مشتری از فهرست حذف شد.');
-  };
-
   // Export CSV
   const handleExportCsv = () => {
     const csvContent = StorageService.exportFittingsToCsv();
@@ -435,10 +385,10 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <Layers className="w-7 h-7 text-blue-400" />
-            <span>مدیریت قیمت‌ها، کاتالوگ و مشتریان</span>
+            <span>مدیریت قیمت‌ها و کاتالوگ کالاها</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            ویرایش مستقیم قیمت پایه لوله‌ها، کاتالوگ اتصالات، پله‌های تخفیف و مشتریان دائمی
+            ویرایش مستقیم قیمت پایه لوله‌ها، کاتالوگ اتصالات و پله‌های تخفیف حجمی
           </p>
         </div>
 
@@ -475,18 +425,6 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
             }`}
           >
             پله‌های تخفیف خودکار
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('customers')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-              activeSubTab === 'customers'
-                ? 'bg-blue-600 text-white shadow'
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>مشتریان ({toPersianDigits(customers.length)})</span>
           </button>
         </div>
       </div>
@@ -933,160 +871,6 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
                 </button>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 4: CUSTOMERS MANAGEMENT */}
-      {activeSubTab === 'customers' && (
-        <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 space-y-6">
-          <div className="border-b border-slate-700 pb-4">
-            <h2 className="text-lg font-bold text-white">مدیریت مشتریان، مشخصات رسمی و تخفیف اختصاصی</h2>
-            <p className="text-slate-400 text-sm mt-1">
-              مشتریان ثبت‌شده در این بخش هنگام تایپ نام در فرم صدور پیش‌فاکتور به صورت خودکار تکمیل می‌شوند.
-            </p>
-          </div>
-
-          <form onSubmit={handleSaveCustomer} className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/70 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">نام مشتری / شرکت (الزامی):</label>
-                <input
-                  type="text"
-                  required
-                  value={newCustomer.name || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  placeholder="مثال: شرکت آب و فاضلاب"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">شماره تماس:</label>
-                <input
-                  type="text"
-                  value={newCustomer.phone || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                  placeholder="۰۹۱۲..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">تخفیف پیش‌فرض (% یا مبلغ):</label>
-                <input
-                  type="number"
-                  value={newCustomer.defaultDiscount || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, defaultDiscount: Number(e.target.value) || 0 })}
-                  placeholder="مثال: 5 (درصد)"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">شماره اقتصادی (ماده ۱۶۹):</label>
-                <input
-                  type="text"
-                  value={newCustomer.economicCode || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, economicCode: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">شناسه ملی / کد ملی:</label>
-                <input
-                  type="text"
-                  value={newCustomer.nationalId || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, nationalId: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">کد پستی ۱۰ رقمی:</label>
-                <input
-                  type="text"
-                  value={newCustomer.postalCode || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-left focus:outline-none"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-slate-400 mb-1">نشانی کامل:</label>
-                <input
-                  type="text"
-                  value={newCustomer.address || ''}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                  placeholder="آدرس تحویل..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>افزودن / بروزرسانی مشتری</span>
-              </button>
-            </div>
-          </form>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-sm">
-              <thead className="bg-slate-900/90 text-xs text-slate-400 border-b border-slate-700">
-                <tr>
-                  <th className="py-3 px-4">نام مشتری</th>
-                  <th className="py-3 px-4">تلفن</th>
-                  <th className="py-3 px-4">کد اقتصادی / شناسه ملی</th>
-                  <th className="py-3 px-4 text-center">تخفیف پیش‌فرض</th>
-                  <th className="py-3 px-4">نشانی</th>
-                  <th className="py-3 px-4 text-center">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/60">
-                {customers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
-                      هنوز مشتری ذخیره شده‌ای وجود ندارد.
-                    </td>
-                  </tr>
-                ) : (
-                  customers.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-700/30">
-                      <td className="py-3 px-4 font-bold text-white">{c.name}</td>
-                      <td className="py-3 px-4 font-mono text-slate-300 text-xs">{c.phone || '-'}</td>
-                      <td className="py-3 px-4 font-mono text-slate-400 text-xs">
-                        {c.economicCode || c.nationalId ? `${c.economicCode || '-'} / ${c.nationalId || '-'}` : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono text-emerald-400 text-xs">
-                        {c.defaultDiscount
-                          ? c.defaultDiscount <= 100
-                            ? `${toPersianDigits(c.defaultDiscount)}٪`
-                            : `${formatNumber(c.defaultDiscount)} ${settings.currencyUnit}`
-                          : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 text-xs">{c.address || '-'}</td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => setNewCustomer(c)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 cursor-pointer"
-                            title="ویرایش مشتری"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCustomer(c.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
-                            title="حذف مشتری"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

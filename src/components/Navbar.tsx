@@ -1,14 +1,15 @@
 import React from 'react';
-import { FileText, Database, History, Settings } from 'lucide-react';
+import { FileText, Database, History, Settings, Users } from 'lucide-react';
 import { getCurrentJalaliDate, toPersianDigits } from '../services/persianUtils';
 
-export type NavTab = 'builder' | 'prices' | 'history';
+export type NavTab = 'builder' | 'prices' | 'customers' | 'history';
 
 interface NavbarProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   onOpenSettings: () => void;
   currencyUnit: string;
+  customerCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,6 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onOpenSettings,
   currencyUnit,
+  customerCount,
 }) => {
   const currentDate = getCurrentJalaliDate();
 
@@ -63,6 +65,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Database className="w-4 h-4" />
               <span>مدیریت قیمت‌ها و کاتالوگ</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+                activeTab === 'customers'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>باشگاه مشتریان</span>
+              {typeof customerCount === 'number' && customerCount > 0 && (
+                <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-white/15 font-mono">
+                  {toPersianDigits(customerCount)}
+                </span>
+              )}
             </button>
 
             <button
