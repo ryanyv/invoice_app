@@ -470,7 +470,7 @@ export function computeInvoiceSummary(params: {
 
   // Compute maximum branch length to enforce freight bed length constraints
   let maxBranchLengthMeters = 0;
-  for (const item of params.items) {
+  for (const item of validItems) {
     if (item.type === 'pipe') {
       if (item.packaging?.packagingType === 'branch') {
         maxBranchLengthMeters = Math.max(maxBranchLengthMeters, item.packaging.unitLength);

@@ -273,16 +273,19 @@ let totalPassed = 0;
 let totalFailed = 0;
 
 function runTest(testName: string, testFn: () => void) {
-  try {
-    testFn();
-    console.log(`  ✓ PASS: ${testName}`);
-    totalPassed++;
-  } catch (err: any) {
-    console.error(`  ✗ FAIL: ${testName}`);
-    console.error(`    Error: ${err?.message || err}`);
-    if (err.stack) console.error(err.stack);
-    totalFailed++;
-  }
+  it(testName, () => {
+    try {
+      testFn();
+      console.log(`  ✓ PASS: ${testName}`);
+      totalPassed++;
+    } catch (err: any) {
+      console.error(`  ✗ FAIL: ${testName}`);
+      console.error(`    Error: ${err?.message || err}`);
+      if (err.stack) console.error(err.stack);
+      totalFailed++;
+      throw err;
+    }
+  });
 }
 
 function expect(actual: any) {
@@ -324,9 +327,7 @@ function expect(actual: any) {
   };
 }
 
-console.log('\n================================================================');
-console.log('CHALLENGER 1: EMPIRICAL STRESS TEST SUITE - REQUIREMENT R3');
-console.log('================================================================\n');
+describe('CHALLENGER 1: EMPIRICAL STRESS TEST SUITE - REQUIREMENT R3', () => {
 
 // ----------------------------------------------------------------------------
 // SUITE 1: CSV UTF-8 BOM BYTE INSPECTION
@@ -893,12 +894,7 @@ console.log('================================================================');
 
 if (totalFailed > 0) {
   console.error('\nVERDICT: REQUEST_CHANGES (Regressions or Failures detected)');
-  if (typeof (globalThis as any).process !== 'undefined') {
-    (globalThis as any).process.exit(1);
-  }
 } else {
   console.log('\nVERDICT: APPROVE (All empirical tests and stress harnesses passed cleanly)');
-  if (typeof (globalThis as any).process !== 'undefined') {
-    (globalThis as any).process.exit(0);
-  }
 }
+});

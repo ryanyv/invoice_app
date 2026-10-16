@@ -49,21 +49,22 @@ function assert(condition: boolean, msg: string): asserts condition {
 }
 
 function test(name: string, fn: () => void) {
-  testCount++;
-  try {
-    fn();
-    passedCount++;
-    console.log(`  ✓ PASS: ${name}`);
-  } catch (err: any) {
-    failedCount++;
-    failureDetails.push(`${name} -> ${err.message}`);
-    console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
-  }
+  it(name, () => {
+    testCount++;
+    try {
+      fn();
+      passedCount++;
+      console.log(`  ✓ PASS: ${name}`);
+    } catch (err: any) {
+      failedCount++;
+      failureDetails.push(`${name} -> ${err.message}`);
+      console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
+      throw err;
+    }
+  });
 }
 
-console.log('\n================================================================');
-console.log('CHALLENGER 2 ADVERSARIAL TEST SUITE: OFFLINE & DESKTOP RELIABILITY');
-console.log('================================================================\n');
+describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: OFFLINE & DESKTOP RELIABILITY', () => {
 
 // ============================================================================
 // SECTION 1: ADVERSARIAL BACKUP RESTORATION (CORRUPTED, TRUNCATED, GIBBERISH)
@@ -489,8 +490,8 @@ console.log(`  FAILED:       ${failedCount}`);
 if (failedCount > 0) {
   console.log(`FAILURES:`);
   failureDetails.forEach((f) => console.log(`  - ${f}`));
-  process.exit(1);
 } else {
   console.log(`ALL ADVERSARIAL CHALLENGER TESTS PASSED SUCCESSFULLY!`);
   console.log('================================================================\n');
 }
+});

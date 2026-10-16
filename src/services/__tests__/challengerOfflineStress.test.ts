@@ -59,6 +59,7 @@ function runSyncTest(name: string, fn: () => void) {
     failedCount++;
     failureDetails.push(`${name} -> ${err.message}`);
     console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
+    throw err;
   }
 }
 
@@ -71,12 +72,14 @@ async function runAsyncTest(name: string, fn: () => Promise<void>) {
     failedCount++;
     failureDetails.push(`${name} -> ${err.message}`);
     console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
+    throw err;
   }
 }
 
 const projectRoot = path.resolve(__dirname, '../../..');
 
-async function main() {
+describe('CHALLENGER EMPIRICAL VERIFICATION HARNESS (Milestone M4: R4)', () => {
+  it('runs all offline stress tests', async () => {
   console.log('\n================================================================');
   console.log('CHALLENGER EMPIRICAL VERIFICATION HARNESS (Milestone M4: R4)');
   console.log('================================================================\n');
@@ -723,15 +726,11 @@ async function main() {
     failureDetails.forEach((f) => console.log(`  ✗ ${f}`));
     console.log('================================================================\n');
     console.log('VERDICT: REQUEST_CHANGES');
-    process.exit(1);
+    throw new Error(`${failedCount} challenger offline stress tests failed`);
   } else {
     console.log('================================================================\n');
     console.log(`ALL CHALLENGER EMPIRICAL STRESS TESTS PASSED CLEANLY (${passedCount}/${passedCount})!`);
     console.log('VERDICT: APPROVE');
   }
-}
-
-main().catch((err) => {
-  console.error('Fatal harness error:', err);
-  process.exit(1);
+  });
 });

@@ -20,6 +20,8 @@ function assert(condition: boolean, message: string) {
   }
 }
 
+describe('Invoicing Workflow Verification Suite', () => {
+  it('passes all 9 invoicing workflow tests', () => {
 console.log('--- RUNNING INVOICING WORKFLOW VERIFICATION SUITE ---');
 
 // Test 1: Real-time Draft Auto-Save
@@ -365,3 +367,5 @@ console.log('✓ Test 9 Passed: Corrupted draft resilience and auto-heal verifie
 console.log('\n========================================');
 console.log('ALL INVOICING WORKFLOW TESTS PASSED (9/9)');
 console.log('========================================\n');
+  });
+});

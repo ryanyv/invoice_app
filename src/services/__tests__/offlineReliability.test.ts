@@ -50,21 +50,22 @@ function assertEqual<T>(actual: T, expected: T, message?: string) {
   }
 }
 
-function runTest(name: string, fn: () => void) {
-  try {
-    fn();
-    totalPassed++;
-    console.log(`  ✓ PASS: ${name}`);
-  } catch (err: any) {
-    totalFailed++;
-    failures.push(`${name} -> ${err.message}`);
-    console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
-  }
+function runTest(name: string, fn: () => void | Promise<void>) {
+  it(name, async () => {
+    try {
+      await fn();
+      totalPassed++;
+      console.log(`  ✓ PASS: ${name}`);
+    } catch (err: any) {
+      totalFailed++;
+      failures.push(`${name} -> ${err.message}`);
+      console.error(`  ✗ FAIL: ${name} -> ${err.message}`);
+      throw err;
+    }
+  });
 }
 
-console.log('\n======================================================');
-console.log('RUNNING OFFLINE & DESKTOP RELIABILITY TEST SUITE (M4)');
-console.log('======================================================\n');
+describe('RUNNING OFFLINE & DESKTOP RELIABILITY TEST SUITE (M4)', () => {
 
 // ----------------------------------------------------------------------------
 // SUITE 1: 100% Offline Font Bundle & Zero CDN Network Requests
@@ -445,8 +446,8 @@ console.log(`TOTAL FAILED: ${totalFailed}`);
 if (totalFailed > 0) {
   console.log('FAILURES:');
   failures.forEach((f) => console.log(`  - ${f}`));
-  process.exit(1);
 } else {
   console.log('ALL OFFLINE & DESKTOP RELIABILITY TESTS PASSED CLEANLY! (15/15)');
   console.log('======================================================\n');
 }
+});

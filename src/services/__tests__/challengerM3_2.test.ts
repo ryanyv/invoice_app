@@ -32,16 +32,19 @@ let totalFailed = 0;
 const failureDetails: string[] = [];
 
 function runTest(name: string, fn: () => void) {
-  try {
-    fn();
-    totalPassed++;
-    console.log(`  ✓ PASS: ${name}`);
-  } catch (err: any) {
-    totalFailed++;
-    const msg = `  ✗ FAIL: ${name}\n    Error: ${err.message || String(err)}`;
-    console.error(msg);
-    failureDetails.push(`${name} -> ${err.message || String(err)}`);
-  }
+  it(name, () => {
+    try {
+      fn();
+      totalPassed++;
+      console.log(`  ✓ PASS: ${name}`);
+    } catch (err: any) {
+      totalFailed++;
+      const msg = `  ✗ FAIL: ${name}\n    Error: ${err.message || String(err)}`;
+      console.error(msg);
+      failureDetails.push(`${name} -> ${err.message || String(err)}`);
+      throw err;
+    }
+  });
 }
 
 function expectEqual<T>(actual: T, expected: T, desc: string) {
@@ -176,9 +179,7 @@ function createBaseInvoice(overrides: Partial<Invoice> = {}): Invoice {
   };
 }
 
-console.log('================================================================');
-console.log('CHALLENGER 2: ADVERSARIAL STRESS TEST HARNESS - REQUIREMENT R3');
-console.log('================================================================\n');
+describe('CHALLENGER 2: ADVERSARIAL STRESS TEST HARNESS - REQUIREMENT R3', () => {
 
 // ============================================================================
 // PROBE 1: 1,000 ITEMS EXTREME SCALE TEST
@@ -733,12 +734,7 @@ if (totalFailed > 0) {
   console.log('\nFAILURE DETAILS:');
   failureDetails.forEach((f) => console.log(` - ${f}`));
   console.log('\nVERDICT: REQUEST_CHANGES');
-  if (typeof (globalThis as any).process !== 'undefined') {
-    (globalThis as any).process.exit(1);
-  }
 } else {
   console.log('\nVERDICT: APPROVE');
-  if (typeof (globalThis as any).process !== 'undefined') {
-    (globalThis as any).process.exit(0);
-  }
 }
+});

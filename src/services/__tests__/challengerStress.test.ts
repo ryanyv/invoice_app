@@ -69,21 +69,21 @@ let totalTests = 0;
 let passedTests = 0;
 
 function runTest(name: string, fn: () => void): void {
-  totalTests++;
-  try {
-    fn();
-    passedTests++;
-    console.log(`  ✓ ${name}`);
-  } catch (err: any) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${err?.message || err}`);
-    throw err;
-  }
+  it(name, () => {
+    totalTests++;
+    try {
+      fn();
+      passedTests++;
+      console.log(`  ✓ ${name}`);
+    } catch (err: any) {
+      console.error(`  ✗ ${name}`);
+      console.error(`    ${err?.message || err}`);
+      throw err;
+    }
+  });
 }
 
-console.log('================================================================');
-console.log('CHALLENGER 1 EMPIRICAL STRESS-TEST HARNESS — MILESTONE M1 (R1)');
-console.log('================================================================\n');
+describe('CHALLENGER 1 EMPIRICAL STRESS-TEST HARNESS — MILESTONE M1 (R1)', () => {
 
 // =====================================================================
 // SUITE 1: DRAFT AUTO-SAVE AND RESTORE ROUND-TRIPS
@@ -902,3 +902,4 @@ runTest('5.2 Customer Autofill with Flat Toman Discount (>100)', () => {
 console.log('\n================================================================');
 console.log(`ALL CHALLENGER 1 STRESS TESTS PASSED (${passedTests}/${totalTests})`);
 console.log('================================================================\n');
+});

@@ -16,7 +16,8 @@ function assertEquals<T>(actual: T, expected: T, message: string) {
     throw new Error(`Assertion failed: ${message} (Expected: ${String(expected)}, Got: ${String(actual)})`);
   }
 }
-
+describe('Advanced Print, Export & Sharing Test Suite (R3)', () => {
+  it('passes all 6 export and sharing test sections', () => {
 console.log('=== RUNNING ADVANCED PRINT, EXPORT & SHARING TEST SUITE (R3) ===');
 
 // Mock data fixtures
@@ -365,3 +366,5 @@ console.log('✓ Test 6.3 Passed: Trillion figures scale cleanly in Persian word
 console.log('======================================================');
 console.log('ALL ADVANCED PRINT, EXPORT & SHARING TESTS PASSED! (6/6)');
 console.log('======================================================');
+  });
+});
