@@ -44,7 +44,7 @@
   }
 
   @page {
-    size: A4 landscape;
+    size: auto;
     margin: 8mm;
   }
 }

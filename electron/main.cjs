@@ -77,7 +77,7 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers for saving PDF and files
-ipcMain.handle('save-pdf', async (event, { defaultName }) => {
+ipcMain.handle('save-pdf', async (event, { defaultName, landscape = true } = {}) => {
   if (!mainWindow) return { success: false, error: 'Window not found' };
 
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -93,7 +93,7 @@ ipcMain.handle('save-pdf', async (event, { defaultName }) => {
   try {
     const pdfData = await mainWindow.webContents.printToPDF({
       pageSize: 'A4',
-      landscape: true,
+      landscape: Boolean(landscape),
       printBackground: true,
       margins: { marginType: 'custom', top: 0.3, bottom: 0.3, left: 0.3, right: 0.3 },
     });
