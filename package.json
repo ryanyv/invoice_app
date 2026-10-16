@@ -5,6 +5,7 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
+    "test": "vitest run",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -26,12 +27,18 @@
       "public/**/*"
     ],
     "mac": {
-      "target": ["dir", "dmg"],
+      "target": [
+        "dir",
+        "dmg"
+      ],
       "identity": null,
       "category": "public.app-category.business"
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     }
   },
   "dependencies": {
@@ -56,6 +63,7 @@
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "vitest": "^5.0.5"
   }
 }
