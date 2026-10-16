@@ -39,6 +39,7 @@ export class StorageService {
 
   static saveFittings(fittings: FittingCatalogItem[]): void {
     localStorage.setItem(KEYS.FITTINGS, JSON.stringify(fittings));
+    this.triggerDiskBackup();
   }
 
   static updateFittingPrice(id: string, newUnitPriceRial: number): void {
@@ -101,6 +102,7 @@ export class StorageService {
 
   static saveSettings(settings: CompanySettings): void {
     localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+    this.triggerDiskBackup();
   }
 
   static getNextInvoiceNumber(): string {
@@ -142,6 +144,7 @@ export class StorageService {
 
   static saveDiscounts(discounts: DiscountRule[]): void {
     localStorage.setItem(KEYS.DISCOUNTS, JSON.stringify(discounts));
+    this.triggerDiskBackup();
   }
 
   // --- Customers ---
@@ -156,6 +159,7 @@ export class StorageService {
 
   static saveCustomers(customers: Customer[]): void {
     localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(customers));
+    this.triggerDiskBackup();
   }
 
   static addOrUpdateCustomer(customer: Customer): void {
@@ -181,6 +185,7 @@ export class StorageService {
 
   static saveInvoices(invoices: Invoice[]): void {
     localStorage.setItem(KEYS.INVOICES, JSON.stringify(invoices));
+    this.triggerDiskBackup();
   }
 
   static saveInvoice(invoice: Invoice): void {
@@ -238,6 +243,8 @@ export class StorageService {
       discounts: this.getDiscounts(),
       customers: this.getCustomers(),
       invoices: this.getInvoices(),
+      weightTable: this.getWeightTable(),
+      gradeSdrPn: this.getGradeSdrPn(),
     };
     return JSON.stringify(backup, null, 2);
   }
@@ -245,15 +252,32 @@ export class StorageService {
   static restoreFromBackup(jsonString: string): boolean {
     try {
       const data = JSON.parse(jsonString);
-      if (data.fittings) this.saveFittings(data.fittings);
-      if (data.settings) this.saveSettings(data.settings);
-      if (data.discounts) this.saveDiscounts(data.discounts);
-      if (data.customers) this.saveCustomers(data.customers);
-      if (data.invoices) this.saveInvoices(data.invoices);
+      if (data.fittings) localStorage.setItem(KEYS.FITTINGS, JSON.stringify(data.fittings));
+      if (data.settings) localStorage.setItem(KEYS.SETTINGS, JSON.stringify(data.settings));
+      if (data.discounts) localStorage.setItem(KEYS.DISCOUNTS, JSON.stringify(data.discounts));
+      if (data.customers) localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(data.customers));
+      if (data.invoices) localStorage.setItem(KEYS.INVOICES, JSON.stringify(data.invoices));
+      if (data.weightTable) localStorage.setItem(KEYS.WEIGHT_TABLE, JSON.stringify(data.weightTable));
+      if (data.gradeSdrPn) localStorage.setItem(KEYS.GRADE_SDR_PN, JSON.stringify(data.gradeSdrPn));
+      this.triggerDiskBackup();
       return true;
     } catch {
       return false;
     }
+  }
+
+  // --- Automated Rolling Disk Backups (Layer 2) ---
+  static async triggerDiskBackup(): Promise<boolean> {
+    try {
+      if (typeof window !== 'undefined' && window.electronAPI?.saveBackup) {
+        const backupJson = this.createFullBackup();
+        const res = await window.electronAPI.saveBackup({ backupJson });
+        return Boolean(res?.success);
+      }
+    } catch (err) {
+      console.warn('[StorageService] Automated disk backup failed:', err);
+    }
+    return false;
   }
 
   // --- Export Fittings to CSV ---

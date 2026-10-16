@@ -142,3 +142,141 @@ ipcMain.handle('import-file', async (event, { extensions = ['json', 'csv'] }) =>
     return { success: false, error: error.message };
   }
 });
+
+// IPC handlers for Automated Rolling Backups & Safe Storage (R4)
+const BACKUP_RETENTION_LIMIT = 20;
+
+function getBackupsDirectory() {
+  const userDataPath = app.getPath('userData');
+  const backupsDir = path.join(userDataPath, 'backups');
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+  return backupsDir;
+}
+
+ipcMain.handle('save-backup', async (event, data = {}) => {
+  try {
+    const backupJson = typeof data === 'string' ? data : (data.backupJson || data.content || JSON.stringify(data));
+    const backupsDir = getBackupsDirectory();
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const filename = `pipecal-backup-${timestamp}.json`;
+    const filePath = path.join(backupsDir, filename);
+
+    // 1. Write timestamped backup snapshot
+    fs.writeFileSync(filePath, backupJson, 'utf-8');
+
+    // 2. Update pipecal-latest.json
+    const latestPath = path.join(backupsDir, 'pipecal-latest.json');
+    fs.writeFileSync(latestPath, backupJson, 'utf-8');
+
+    // Also update pipecal-latest.json directly in userData root for quick recovery
+    const rootLatestPath = path.join(app.getPath('userData'), 'pipecal-latest.json');
+    try {
+      fs.writeFileSync(rootLatestPath, backupJson, 'utf-8');
+    } catch (e) {
+      // Non-fatal if root has restricted permissions
+    }
+
+    // 3. Prune old backups exceeding retention limit (latest 20 backups)
+    const backupFiles = fs.readdirSync(backupsDir)
+      .filter((f) => f.startsWith('pipecal-backup-') && f.endsWith('.json'))
+      .map((f) => {
+        const fullPath = path.join(backupsDir, f);
+        try {
+          const stat = fs.statSync(fullPath);
+          return { filename: f, filePath: fullPath, mtimeMs: stat.mtimeMs };
+        } catch {
+          return { filename: f, filePath: fullPath, mtimeMs: 0 };
+        }
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    if (backupFiles.length > BACKUP_RETENTION_LIMIT) {
+      const toPrune = backupFiles.slice(BACKUP_RETENTION_LIMIT);
+      for (const item of toPrune) {
+        try {
+          if (fs.existsSync(item.filePath)) {
+            fs.unlinkSync(item.filePath);
+          }
+        } catch (pruneErr) {
+          console.warn('[save-backup] Error pruning old backup:', item.filename, pruneErr);
+        }
+      }
+    }
+
+    return { success: true, filePath, filename };
+  } catch (err) {
+    console.error('[save-backup] Error saving backup:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('list-backups', async () => {
+  try {
+    const backupsDir = getBackupsDirectory();
+    if (!fs.existsSync(backupsDir)) {
+      return { success: true, files: [], backups: [] };
+    }
+
+    const entries = fs.readdirSync(backupsDir)
+      .filter((f) => f.startsWith('pipecal-backup-') && f.endsWith('.json'))
+      .map((f) => {
+        const fullPath = path.join(backupsDir, f);
+        try {
+          const stat = fs.statSync(fullPath);
+          return {
+            filename: f,
+            filePath: fullPath,
+            size: stat.size,
+            createdAt: stat.mtime.toISOString(),
+            mtimeMs: stat.mtimeMs,
+          };
+        } catch {
+          return {
+            filename: f,
+            filePath: fullPath,
+            size: 0,
+            createdAt: new Date().toISOString(),
+            mtimeMs: 0,
+          };
+        }
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    return {
+      success: true,
+      files: entries.map((e) => e.filename),
+      backups: entries,
+    };
+  } catch (err) {
+    console.error('[list-backups] Error listing backups:', err);
+    return { success: false, error: err.message, files: [], backups: [] };
+  }
+});
+
+ipcMain.handle('load-backup', async (event, options = {}) => {
+  try {
+    const filename = typeof options === 'string' ? options : (options.filename || options.filePath);
+    if (!filename) {
+      return { success: false, error: 'Filename or path is required' };
+    }
+
+    const backupsDir = getBackupsDirectory();
+    const resolvedPath = path.isAbsolute(filename) ? filename : path.join(backupsDir, filename);
+
+    if (!fs.existsSync(resolvedPath)) {
+      return { success: false, error: `Backup file not found: ${filename}` };
+    }
+
+    const content = fs.readFileSync(resolvedPath, 'utf-8');
+    return { success: true, content, filePath: resolvedPath };
+  } catch (err) {
+    console.error('[load-backup] Error loading backup:', err);
+    return { success: false, error: err.message };
+  }
+});
+

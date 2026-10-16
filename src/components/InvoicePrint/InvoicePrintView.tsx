@@ -34,7 +34,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
 
   const currencyUnit = invoice.currencyUnit || settings.currencyUnit || 'تومان';
 
-  const handlePrint = async () => {
+  const handlePrint = React.useCallback(async () => {
     // Check if running inside Electron with savePdf IPC
     if ((window as any).electronAPI?.savePdf) {
       const modePrefix = isOfficial ? 'صورتحساب_رسمی' : 'پیش_فاکتور';
@@ -51,7 +51,22 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
     } else {
       window.print();
     }
-  };
+  }, [invoice, isOfficial, isLandscape]);
+
+  React.useEffect(() => {
+    const onTriggerPrint = () => {
+      handlePrint();
+    };
+    const onEscape = () => {
+      onBack();
+    };
+    window.addEventListener('pipecal:trigger-print', onTriggerPrint);
+    window.addEventListener('pipecal:escape', onEscape);
+    return () => {
+      window.removeEventListener('pipecal:trigger-print', onTriggerPrint);
+      window.removeEventListener('pipecal:escape', onEscape);
+    };
+  }, [handlePrint, onBack]);
 
   const handleExportCsv = () => {
     exportInvoiceToCsv({ ...invoice, isOfficial, currencyUnit }, settings);

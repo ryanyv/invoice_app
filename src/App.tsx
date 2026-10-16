@@ -7,6 +7,7 @@ import { InvoicePrintView } from './components/InvoicePrint/InvoicePrintView';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { StorageService } from './services/storage';
 import { getCurrentJalaliDate } from './services/persianUtils';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import {
   CompanySettings,
   Customer,
@@ -73,6 +74,44 @@ export const App: React.FC = () => {
     setCustomers(StorageService.getCustomers());
     setInvoices(StorageService.getInvoices());
   };
+
+  // Global Desktop Keyboard Shortcuts (Ctrl/Cmd+S, Ctrl/Cmd+P, Ctrl/Cmd+N, Escape)
+  useKeyboardShortcuts({
+    onSave: () => {
+      if (previewInvoice) {
+        window.dispatchEvent(new CustomEvent('pipecal:trigger-print'));
+      } else {
+        if (activeTab !== 'builder') setActiveTab('builder');
+        window.dispatchEvent(new CustomEvent('pipecal:save-invoice'));
+      }
+    },
+    onPrint: () => {
+      if (previewInvoice) {
+        window.dispatchEvent(new CustomEvent('pipecal:trigger-print'));
+      } else {
+        if (activeTab !== 'builder') setActiveTab('builder');
+        window.dispatchEvent(new CustomEvent('pipecal:preview-invoice'));
+      }
+    },
+    onNewDraft: () => {
+      if (previewInvoice) {
+        setPreviewInvoice(null);
+      }
+      if (activeTab !== 'builder') {
+        setActiveTab('builder');
+      }
+      window.dispatchEvent(new CustomEvent('pipecal:reset-draft'));
+    },
+    onEscape: () => {
+      if (isSettingsOpen) {
+        setIsSettingsOpen(false);
+      } else if (previewInvoice) {
+        setPreviewInvoice(null);
+      } else {
+        window.dispatchEvent(new CustomEvent('pipecal:escape'));
+      }
+    },
+  });
 
   // If viewing printable preview
   if (previewInvoice) {
