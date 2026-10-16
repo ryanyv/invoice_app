@@ -897,3 +897,4 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
     </div>
   );
 };
+
