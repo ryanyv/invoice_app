@@ -152,6 +152,7 @@ export const App: React.FC = () => {
               setSettings(StorageService.getSettings());
               setEditingSession(null);
             }}
+            onUpdateSettings={setSettings}
           />
         )}
 

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveBackup: (options) => ipcRenderer.invoke('save-backup', options),
   listBackups: () => ipcRenderer.invoke('list-backups'),
   loadBackup: (options) => ipcRenderer.invoke('load-backup', options),
+  fetchMarketPrices: () => ipcRenderer.invoke('fetch-market-prices'),
   isElectron: true,
 });
 

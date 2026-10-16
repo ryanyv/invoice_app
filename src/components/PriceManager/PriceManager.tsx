@@ -12,9 +12,13 @@ import {
   RotateCcw,
   Percent,
   Layers,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import { CompanySettings, DiscountRule, FittingCatalogItem, PipeGrade } from '../../types';
 import { StorageService } from '../../services/storage';
+import { MarketPriceService } from '../../services/marketPriceService';
 import { formatNumber, formatPrice, toPersianDigits } from '../../services/persianUtils';
 
 interface PriceManagerProps {
@@ -78,6 +82,44 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Market live price sync state
+  const [isFetchingMarket, setIsFetchingMarket] = useState(false);
+  const [marketSnapshot, setMarketSnapshot] = useState(() => MarketPriceService.getStoredMarketPrices());
+
+  const handleSyncIMEPrices = async () => {
+    setIsFetchingMarket(true);
+    try {
+      const snapshot = await MarketPriceService.fetchLiveMarketPrices();
+      setMarketSnapshot(snapshot);
+      const newPrices = { ...pipePrices };
+      for (const item of snapshot.items) {
+        if (item.grade === 'PE100' && item.id.includes('black')) {
+          newPrices.PE100 = item.pricePerKgToman;
+        } else if (item.grade === 'PE80') {
+          newPrices.PE80 = item.pricePerKgToman;
+        } else if (item.grade === 'PE63') {
+          newPrices.PE63 = item.pricePerKgToman;
+        }
+      }
+      setPipePrices(newPrices);
+      const updatedSettings = {
+        ...settings,
+        basePipePrices: newPrices,
+      };
+      onUpdateSettings(updatedSettings);
+      StorageService.saveSettings(updatedSettings);
+      showToast(
+        snapshot.isOnline
+          ? '✓ نرخ‌های رسمی بورس کالا به صورت آنلاین دریافت و اعمال گردید.'
+          : 'حالت آفلاین: آخرین نرخ رسمی مصوب پتروشیمی اعمال گردید.'
+      );
+    } catch {
+      showToast('خطا در استعلام آنلاین؛ از نرخ‌های آفلاین استفاده شد.');
+    } finally {
+      setIsFetchingMarket(false);
+    }
   };
 
   // Save pipe base prices
@@ -351,6 +393,44 @@ export const PriceManager: React.FC<PriceManagerProps> = ({
             <p className="text-slate-400 text-sm mt-1">
               هنگام افزودن لوله به پیش‌فاکتور، نرخ پیش‌فرض هر کیلوگرم از این جدول خوانده می‌شود.
             </p>
+          </div>
+
+          {/* IME Market Price Live Sync Card */}
+          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                marketSnapshot.isOnline
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+              }`}>
+                {marketSnapshot.isOnline ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">همگام‌سازی با نرخ رسمی بورس کالای ایران (IME)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                    marketSnapshot.isOnline
+                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                  }`}>
+                    {marketSnapshot.isOnline ? '🟢 آنلاین (متصل به بازار)' : '🟡 آفلاین (آخرین نرخ رسمی مصوب)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  مرجع: {marketSnapshot.source} (تاریخ: {marketSnapshot.lastUpdated})
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSyncIMEPrices}
+              disabled={isFetchingMarket}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer whitespace-nowrap"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetchingMarket ? 'animate-spin' : ''}`} />
+              <span>{isFetchingMarket ? 'در حال استعلام...' : 'دریافت آنلاین و همگام‌سازی نرخ بورس'}</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

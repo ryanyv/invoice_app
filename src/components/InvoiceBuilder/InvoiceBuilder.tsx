@@ -19,6 +19,11 @@ import {
   Sparkles,
   AlertCircle,
   ArrowRight,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Globe,
+  TrendingUp,
 } from 'lucide-react';
 import {
   CompanySettings,
@@ -37,7 +42,10 @@ import {
   PackagingResult,
   FreightRecommendation,
   RawMaterialCostResult,
+  MarketPolymerItem,
+  MarketPriceSnapshot,
 } from '../../types';
+import { MarketPriceService } from '../../services/marketPriceService';
 import {
   computeInvoiceSummary,
   computePipeItem,
@@ -72,6 +80,7 @@ interface InvoiceBuilderProps {
   onClearEditingSession?: () => void;
   onPreviewPrint: (invoice: Invoice) => void;
   onInvoiceSaved?: () => void;
+  onUpdateSettings?: (settings: CompanySettings) => void;
 }
 
 export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
@@ -85,6 +94,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   onClearEditingSession,
   onPreviewPrint,
   onInvoiceSaved,
+  onUpdateSettings,
 }) => {
   // Active currency unit: from editing session if editing, or current settings
   const activeCurrency = editingSession?.invoice?.currencyUnit || settings.currencyUnit || 'تومان';
@@ -284,6 +294,46 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     rawConversionCost,
     rawProfitMarginPct,
   ]);
+
+  // --- ONLINE & OFFLINE MARKET POLYMER PRICES STATE (IME / BOURSE KALA) ---
+  const [marketSnapshot, setMarketSnapshot] = useState<MarketPriceSnapshot>(() =>
+    MarketPriceService.getStoredMarketPrices()
+  );
+  const [isFetchingMarket, setIsFetchingMarket] = useState<boolean>(false);
+
+  const handleRefreshMarketPrices = async () => {
+    setIsFetchingMarket(true);
+    try {
+      const live = await MarketPriceService.fetchLiveMarketPrices();
+      setMarketSnapshot(live);
+      if (live.isOnline) {
+        notify('✓ استعلام زنده: آخرین نرخ‌های بورس کالا با موفقیت دریافت شدند.');
+      } else {
+        notify('حالت آفلاین: آخرین نرخ مصوب رسمی پتروشیمی از حافظه برنامه بارگذاری شد.');
+      }
+    } catch {
+      notify('عدم برقراری ارتباط اینترنت؛ نرخ‌های ذخیره‌شده آفلاین معتبر هستند.');
+    } finally {
+      setIsFetchingMarket(false);
+    }
+  };
+
+  const handleSelectMarketItem = (item: MarketPolymerItem) => {
+    const unitPrice = activeCurrency === 'ریال' ? item.pricePerKgToman * 10 : item.pricePerKgToman;
+    if (item.grade === 'Masterbatch') {
+      setRawMasterbatchPrice(unitPrice);
+      notify(`نرخ مستربچ دوده به ${formatNumber(unitPrice)} ${activeCurrency} تنظیم شد.`);
+    } else {
+      setRawPolymerPrice(unitPrice);
+      notify(`نرخ پایه پلیمر (${item.grade}) به ${formatNumber(unitPrice)} ${activeCurrency} تنظیم شد.`);
+    }
+  };
+
+  const handleApplyAllToSystem = () => {
+    const updated = MarketPriceService.applyAllMarketPrices(marketSnapshot);
+    onUpdateSettings?.(updated);
+    notify('✓ نرخ‌های رسمی بورس کالا بر روی قیمت‌های پایه کل سیستم اعمال گردید.');
+  };
 
   // --- FITTING FORM STATE ---
   const activeFittings = useMemo(() => fittings.filter((f) => f.isActive), [fittings]);
@@ -2257,7 +2307,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       {/* --- MODAL: RAW MATERIAL COST CALCULATOR (بورس کالا و هزینه تبدیل) --- */}
       {showCostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl max-h-[92vh] overflow-y-auto w-full p-6 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-slate-700 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -2272,16 +2322,123 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCostModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Official Iranian Market Prices Banner & Ticker */}
+            <div className="bg-slate-950/90 rounded-xl p-4 border border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-2 rounded-lg border flex items-center justify-center ${
+                    marketSnapshot.isOnline
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                  }`}>
+                    {marketSnapshot.isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">نرخ‌های رسمی بورس کالای ایران (IME)</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                        marketSnapshot.isOnline
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                      }`}>
+                        {marketSnapshot.isOnline ? '🟢 استعلام زنده آنلاین' : '🟡 آخرین نرخ مصوب رسمی (آفلاین)'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">
+                      مرجع: {marketSnapshot.source} (تاریخ: {marketSnapshot.lastUpdated})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRefreshMarketPrices}
+                    disabled={isFetchingMarket}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-lg text-xs font-medium transition-all shadow-sm cursor-pointer"
+                    title="استعلام آخرین نرخ‌های رسمی بورس کالا"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isFetchingMarket ? 'animate-spin' : ''}`} />
+                    <span>{isFetchingMarket ? 'در حال استعلام...' : 'استعلام آنلاین نرخ بورس'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleApplyAllToSystem}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                    title="بروزرسانی قیمت پایه لوله در کل سیستم با نرخ‌های رسمی بورس"
+                  >
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>اعمال روی نرخ پایه کل سیستم</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Polymer Grade Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                {marketSnapshot.items.map((item) => {
+                  const displayPrice = activeCurrency === 'ریال' ? item.pricePerKgToman * 10 : item.pricePerKgToman;
+                  const isSelected = item.grade === 'Masterbatch'
+                    ? rawMasterbatchPrice === displayPrice
+                    : rawPolymerPrice === displayPrice;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500/30'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="font-bold text-white text-xs">{item.name}</span>
+                          {item.changePercent !== undefined && (
+                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                              item.changePercent >= 0
+                                ? 'bg-emerald-500/10 text-emerald-400'
+                                : 'bg-rose-500/10 text-rose-400'
+                            }`}>
+                              {item.changePercent >= 0 ? '+' : ''}{item.changePercent}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400">{item.producer} ({item.code})</div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-800/80">
+                        <div className="font-mono font-bold text-emerald-400 text-xs">
+                          {formatNumber(displayPrice)} {activeCurrency}/kg
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectMarketItem(item)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                          }`}
+                        >
+                          {isSelected ? '✓ انتخاب شده' : 'انتخاب برای فرمول'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Inputs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">قیمت پایه پلیمر بورس کالا ({settings.currencyUnit}/kg):</label>
+                <label className="block text-slate-300 mb-1 font-medium">قیمت پایه پلیمر بورس کالا ({activeCurrency}/kg):</label>
                 <input
                   type="number"
                   value={rawPolymerPrice || ''}

@@ -208,3 +208,25 @@ export interface GradeSdrPn {
   };
 }
 
+export type PolymerMarketGrade = 'PE100' | 'PE80' | 'PE63' | 'Masterbatch';
+
+export interface MarketPolymerItem {
+  id: string;
+  grade: PolymerMarketGrade;
+  name: string; // e.g. "پلی‌اتیلن سنگین اکستروژن لوله PE100"
+  producer: string; // e.g. "پتروشیمی جم / مارون / امیرکبیر"
+  code: string; // e.g. "CRP100N / EX3"
+  pricePerKgToman: number; // نرخ به تومان
+  changePercent?: number; // درصد تغییر هفتگی
+  market: string; // e.g. "بورس کالای ایران (IME) / دفتر توسعه صنایع تکمیلی پتروشیمی"
+  publishDate: string; // تاریخ شمسی اعلام نرخ
+}
+
+export interface MarketPriceSnapshot {
+  source: string; // "دفتر توسعه صنایع تکمیلی پتروشیمی (NPC) / بورس کالای ایران"
+  lastUpdated: string; // تاریخ و ساعت استعلام
+  isOnline: boolean; // استعلام زنده از وب یا حافظه آفلاین
+  statusMessage?: string;
+  items: MarketPolymerItem[];
+}
+
