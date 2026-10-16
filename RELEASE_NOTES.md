@@ -1,6 +1,6 @@
-# Pipecal Pro v2.0.0 — Official Desktop Release 🚀
-### Enterprise Desktop Solution for Polyethylene Pipes & Fittings Pricing, Quotation & Logistics
-### سیستم جامع صدور پیش‌فاکتور و مدیریت قیمت لوله و اتصالات پلی‌اتیلن
+# Pipecal Pro v2.1.0 — Accounting Management & CRM Lite Release 📊🚀
+### Enterprise Desktop Solution for Polyethylene Pipes & Fittings Pricing, Quotation, Accounting & Logistics
+### سامانه جامع مهندسی، صدور پیش‌فاکتور، مدیریت حسابداری، دریافت‌ها و اسناد مالی (CRM Lite)
 
 <p align="center">
   <b>🌐 Language / زبان:</b>
@@ -11,6 +11,121 @@
 ---
 
 ## 🇬🇧 English
+
+We are proud to announce the release of **Pipecal Pro v2.1.0**, introducing a dedicated **Accounting Management (CRM Lite)** engine alongside our enterprise polyethylene engineering calculation and invoicing platform.
+
+Pipecal Pro 2.1 brings comprehensive financial ledgers, customer balance tracking, a multi-method receipts journal, invoice settlement analysis, and compliant quarterly tax reporting (Article 169) directly into the desktop workspace.
+
+---
+
+### 📥 Download Packages (v2.1.0)
+
+| Operating System | Package Type / Architecture | File Size | Direct Download Link |
+| :--- | :--- | :--- | :--- |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Pipecal.Pro-2.1.0-arm64.dmg](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 `.exe` (NSIS) | ~109 MB | [Pipecal.Pro.Setup.2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
+| 🪟 **Windows** | Standalone Portable x64 `.exe` | ~108 MB | [Pipecal.Pro.2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
+
+> **Note**: Both a full Windows installer (`Setup.exe`) and a standalone portable single-file executable are provided. The portable edition requires no installation or administrator rights.
+
+---
+
+### 🔒 File Integrity & Checksums (SHA-256)
+
+For security and file verification, match the SHA-256 checksums below:
+
+```text
+a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58  Pipecal.Pro-2.1.0-arm64.dmg
+ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46  Pipecal.Pro.Setup.2.1.0.exe
+71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb  Pipecal.Pro.2.1.0.exe
+```
+
+---
+
+### 🌟 What's New in Version 2.1.0
+
+#### 1. 📊 Accounting & Financial Management (CRM Lite)
+- **Top-Level Navigation & Debtor Counter**: Dedicated "حسابداری و مالی" section with live real-time badge tracking active company debtors.
+- **Customer Ledger & Running Balance (صورت‌حساب معین مشتریان)**:
+  - Real-time diagnostic indicators (`بدهکار` Debtor, `بستانکار` Creditor, `تسویه` Balanced).
+  - Executive financial summary KPI cards (Total Invoiced, Settled Receipts, Net Receivables, Pending Cheques).
+  - Chronological transaction statements with debits, credits, running balances, and Persian written amounts.
+  - Multi-filtering by Debtors, Settled, Pending Cheques, and Official/Taxable accounts.
+- **Receipts Journal (دفتر ثبت و مدیریت دریافت‌ها)**:
+  - Supports Bank Transfers (حواله بانکی / پایا / ساتنا), Sayadi Cheques (چک صیادی), POS Cards (کارت‌خوان), and Cash (نقدی).
+  - Sayadi cheque lifecycle tracking (`در جریان وصول` Pending, `پاس شده` Cleared, `برگشتی` Bounced).
+  - Printable and exportable official payment receipt vouchers (سند دریافت وجه) with Persian text formatting and signature blocks.
+- **Invoice Settlement Tracking (وضعیت تسویه فاکتورها)**:
+  - Itemized tracking of invoice billing amounts vs payments and remaining balances (`پرداخت نشده`, `تسویه ناقص`, `تسویه کامل`).
+  - Single-click invoice preview and printing directly from the accounting workspace.
+- **Article 169 Quarterly Tax Reporting (گزارش معاملات فصلی ماده ۱۶۹ م.م)**:
+  - Official tax rows compliant with Iranian National Tax Administration requirements.
+  - RFC 4180 compliant CSV export with UTF-8 BOM encoding for Microsoft Excel.
+
+#### 2. 🛡️ Robustness & Data Integrity
+- **Multi-Currency Normalization**: Automatic conversion between Rials and Tomans (1 Toman = 10 Rials) across all ledgers and statements.
+- **Persian & Arabic Unicode Unification**: Unifies Arabic Yeh (`ي`/`ى`), Kaf (`ك`), zero-width non-joiners (ZWNJ), and numerals so customer accounts never fragment due to keyboard variants.
+- **Orphan Customer Synthesis**: Synthesizes customer accounts dynamically from invoice and payment records even if not explicitly registered in CRM.
+- **Dedicated Print Isolation**: `@media print` layout eliminating backdrop bleeds and scrollbar clipping for clean multi-page physical printing and PDF export.
+
+---
+
+### 🇮🇷 فارسی
+
+انتشار رسمی **Pipecal Pro نسخه ۲.۱.۰** با افزودن بخش تخصصی **مدیریت حسابداری و مالی (CRM Lite)** همراه با تمامی امکانات مهندسی و بازرگانی لوله و اتصالات پلی‌اتیلن.
+
+---
+
+### 📥 دریافت فایل‌های نصبی نسخه ۲.۱.۰
+
+| سیستم‌عامل (OS) | نوع بسته / معماری (Package) | حجم (Size) | لینک مستقیم دانلود (Direct Download) |
+| :--- | :--- | :--- | :--- |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [دانلود Pipecal Pro 2.1.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
+| 🪟 **Windows** | فایل نصبی x64 `.exe` (NSIS Installer) | ~109 MB | [دانلود Pipecal Pro Setup 2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
+| 🪟 **Windows** | نسخه پرتابل x64 `.exe` (بدون نیاز به نصب) | ~108 MB | [دانلود Pipecal Pro 2.1.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
+
+---
+
+### 🔒 اعتبارسنجی و کد هش فایل‌ها (SHA-256)
+
+```text
+a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58  Pipecal.Pro-2.1.0-arm64.dmg
+ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46  Pipecal.Pro.Setup.2.1.0.exe
+71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb  Pipecal.Pro.2.1.0.exe
+```
+
+---
+
+### 🌟 ویژگی‌ها و امکانات جدید نسخه ۲.۱.۰
+
+#### ۱. 📊 مدیریت حسابداری و مالی (CRM Lite)
+- **برگه اختصاصی حسابداری و نشانگر بدهکاران**: افزودن برگه «حسابداری و مالی» به نوار ناوبری اصلی همراه با نشانگر زنده تعداد بدهکاران فعال.
+- **صورت‌حساب معین و مانده حساب مشتریان**:
+  - کارت‌های شاخص‌های کلیدی مالی (مجموع خرید، دریافتی‌ها، مانده طلب، اسناد در جریان).
+  - جدول مانده حساب با تشخیص وضعیت مالی (`بدهکار`، `بستانکار`، `تسویه`).
+  - گزارش صورت‌حساب تفصیلی معین با محاسبه مانده متحرک (Running Balance)، تبدیل حروف ارقام و امکان چاپ یا صدور PDF مستقیم.
+  - فیلترهای پیشرفته: فقط بدهکاران، تسویه‌شده‌ها، چک‌های در جریان، فاکتورهای رسمی.
+- **دفتر ثبت و مدیریت دریافت‌ها**:
+  - ثبت انواع دریافت: حواله بانکی (پایا/ساتنا)، چک‌های صیادی، کارت‌خوان، و نقدی.
+  - چرخه وضعیت چک‌های صیادی (در جریان وصول، پاس‌شده، برگشتی).
+  - چاپ و صدور فایل سند رسمی دریافت وجه با سربرگ شرکتی و محل امضا.
+- **پیگیری تسویه فاکتورها**: بررسی وضعیت پرداخت هر پیش‌فاکتور/فاکتور به تفکیک مبالغ وصول‌شده و مانده، با دسترسی به چاپ و پیش‌نمایش مستقیم.
+- **گزارش فصلی معاملات (ماده ۱۶۹ م.م)**: استخراج جدول استانداردهای دارایی و خروجی اکسل (CSV) با کدگذاری UTF-8 BOM.
+- **یکپارچه‌سازی ارزی و نویسه‌ای**: تبدیل خودکار ریال و تومان (۱ تومان = ۱۰ ریال) و نرمال‌سازی حروف فارسی و عربی (ی/ک/نیم‌فاصله) برای جلوگیری از تفکیک حساب‌های مشتری.
+
+---
+
+# Previous Releases / نسخه‌های پیشین
+
+---
+
+# Pipecal Pro v2.0.0 — Official Desktop Release 🚀
+### Enterprise Desktop Solution for Polyethylene Pipes & Fittings Pricing, Quotation & Logistics
+### سیستم جامع صدور پیش‌فاکتور و مدیریت قیمت لوله و اتصالات پلی‌اتیلن
+
+---
+
+## 🇬🇧 English (v2.0.0)
 
 We are proud to announce the official release of **Pipecal Pro v2.0.0**, an enterprise-grade desktop application engineered specifically for polyethylene (PE) pipe and fitting manufacturers, distributors, and engineering contractors.
 

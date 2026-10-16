@@ -36,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg text-white">شرکت پلی غرب</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
-                  نسخه ۲.۰
+                  نسخه ۲.۱
                 </span>
               </div>
               <p className="text-xs text-slate-400">سامانه صدور پیش‌فاکتور و مدیریت قیمت اتصالات و لوله‌ها</p>

@@ -2,18 +2,18 @@
   <img src="public/logo.png" alt="Pipecal Pro Logo" width="160" />
 </p>
 
-# Pipecal Pro 2.0 🚀
-### Enterprise Desktop System for Polyethylene Pipes & Fittings Pricing, Quotation & Logistics
-### سیستم جامع صدور پیش‌فاکتور و مدیریت قیمت لوله و اتصالات پلی‌اتیلن
+# Pipecal Pro 2.1 🚀
+### Enterprise Desktop System for Polyethylene Pipes & Fittings Pricing, Quotation, Accounting & Logistics
+### سیستم جامع صدور پیش‌فاکتور، مدیریت قیمت، حسابداری و اسناد مالی لوله و اتصالات پلی‌اتیلن
 
 <p align="center">
-  <a href="https://github.com/ryanyv/invoice_app/releases/latest"><img src="https://img.shields.io/badge/Release-v2.0.0-0284c7?style=flat-square&logo=github" alt="Latest Release" /></a>
+  <a href="https://github.com/ryanyv/invoice_app/releases/latest"><img src="https://img.shields.io/badge/Release-v2.1.0-0284c7?style=flat-square&logo=github" alt="Latest Release" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.3-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-44.5-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 44" /></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS 4" /></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-8.3-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8" /></a>
-  <img src="https://img.shields.io/badge/Tests-208%20Passing-success?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-224%20Passing-success?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/License-Proprietary%20%28Polygharb%29-amber?style=flat-square" alt="License" />
 </p>
@@ -47,9 +47,9 @@ Ready-to-use desktop binaries for macOS and Windows are published and available 
 
 | Operating System | Package Type / Architecture | File Size | Direct Download |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Download Pipecal Pro 2.0.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro-2.0.0-arm64.dmg) |
-| 🪟 **Windows** | Setup Installer x64 `.exe` (NSIS) | ~108 MB | [Download Pipecal Pro Setup 2.0.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.Setup.2.0.0.exe) |
-| 🪟 **Windows** | Standalone Portable x64 `.exe` | ~108 MB | [Download Pipecal Pro 2.0.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.2.0.0.exe) |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Download Pipecal Pro 2.1.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 `.exe` (NSIS) | ~109 MB | [Download Pipecal Pro Setup 2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
+| 🪟 **Windows** | Standalone Portable x64 `.exe` | ~108 MB | [Download Pipecal Pro 2.1.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
 
 > 💡 **Release Notes**: View changelogs and historical builds on the [Releases Archive](https://github.com/ryanyv/invoice_app/releases).
 
@@ -127,9 +127,9 @@ Ready-to-use desktop binaries for macOS and Windows are published and available 
 
 | File Name | SHA-256 Digest |
 | :--- | :--- |
-| `Pipecal.Pro-2.0.0-arm64.dmg` | `342a4ba06a08894d0ccd1283496efd92880ebc1797fb820315111d63f353466d` |
-| `Pipecal.Pro.Setup.2.0.0.exe` | `6e741f98fc55322d7ebdef7307a9b23ae7b4600b93ecded04e8eccd4424fb667` |
-| `Pipecal.Pro.2.0.0.exe` | `707acdd96df944509ff832762a6e881f059a29c02b16e2b6eb6f0106cea6f7df` |
+| `Pipecal.Pro-2.1.0-arm64.dmg` | `a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58` |
+| `Pipecal.Pro.Setup.2.1.0.exe` | `ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46` |
+| `Pipecal.Pro.2.1.0.exe` | `71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb` |
 
 ---
 
@@ -243,9 +243,9 @@ All rights reserved © Polygharb.
 
 | سیستم‌عامل (OS) | نوع فایل / معماری (Package) | حجم (Size) | لینک مستقیم دانلود (Direct Download) |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [دانلود Pipecal Pro 2.0.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro-2.0.0-arm64.dmg) |
-| 🪟 **Windows** | Setup Installer x64 `.exe` (نصبی) | ~108 MB | [دانلود Pipecal Pro Setup 2.0.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.Setup.2.0.0.exe) |
-| 🪟 **Windows** | Portable x64 `.exe` (بدون نیاز به نصب) | ~108 MB | [دانلود Pipecal Pro 2.0.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.0.0/Pipecal.Pro.2.0.0.exe) |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [دانلود Pipecal Pro 2.1.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 `.exe` (نصبی) | ~109 MB | [دانلود Pipecal Pro Setup 2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
+| 🪟 **Windows** | Portable x64 `.exe` (بدون نیاز به نصب) | ~108 MB | [دانلود Pipecal Pro 2.1.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
 
 > 💡 **یادداشت:** برای مشاهده تاریخچه تمامی نسخه‌ها، یادداشت‌های تغییرات و نسخه‌های پیشین، به [صفحه انتشارات پروژه (Releases Page)](https://github.com/ryanyv/invoice_app/releases) مراجعه کنید.
 
@@ -324,9 +324,9 @@ All rights reserved © Polygharb.
 
 | نام فایل (File) | الگوریتم SHA-256 |
 | :--- | :--- |
-| `Pipecal.Pro-2.0.0-arm64.dmg` | `342a4ba06a08894d0ccd1283496efd92880ebc1797fb820315111d63f353466d` |
-| `Pipecal.Pro.Setup.2.0.0.exe` | `6e741f98fc55322d7ebdef7307a9b23ae7b4600b93ecded04e8eccd4424fb667` |
-| `Pipecal.Pro.2.0.0.exe` | `707acdd96df944509ff832762a6e881f059a29c02b16e2b6eb6f0106cea6f7df` |
+| `Pipecal.Pro-2.1.0-arm64.dmg` | `a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58` |
+| `Pipecal.Pro.Setup.2.1.0.exe` | `ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46` |
+| `Pipecal.Pro.2.1.0.exe` | `71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb` |
 
 ---
 

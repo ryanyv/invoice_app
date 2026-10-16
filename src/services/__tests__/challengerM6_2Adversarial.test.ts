@@ -5,6 +5,8 @@ import { execSync } from 'child_process';
 
 describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGING', () => {
   const rootDir = path.resolve(__dirname, '../../..');
+  const pkgPath = path.join(rootDir, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
   // -------------------------------------------------------------
   // SUITE 1: Git Branching & Merge Integrity
@@ -67,12 +69,9 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
   // SUITE 2: Package Configuration & electron-builder
   // -------------------------------------------------------------
   describe('2. Package Configuration & electron-builder Specs', () => {
-    const pkgPath = path.join(rootDir, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-
     it('2.1 package.json specifies correct build metadata and appId', () => {
       expect(pkg.name).toBe('pipecal-invoice-pro');
-      expect(pkg.version).toBe('2.0.0');
+      expect(pkg.version).toBe('2.1.0');
       expect(pkg.main).toBe('electron/main.cjs');
       expect(pkg.build).toBeDefined();
       expect(pkg.build.appId).toBe('com.polygharb.pipecal');
@@ -180,7 +179,7 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
   // -------------------------------------------------------------
   describe('4. Packaged Application Bundles & Asar Verification', () => {
     it('4.1 macOS arm64 DMG and .app bundle exist and satisfy size requirements', () => {
-      const dmgPath = path.join(rootDir, 'release/Pipecal Pro-2.0.0-arm64.dmg');
+      const dmgPath = path.join(rootDir, `release/Pipecal Pro-${pkg.version}-arm64.dmg`);
       const appPath = path.join(rootDir, 'release/mac-arm64/Pipecal Pro.app');
       const macBinary = path.join(appPath, 'Contents/MacOS/Pipecal Pro');
 
@@ -197,8 +196,8 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
     });
 
     it('4.2 Windows Setup installer, Portable exe, and win-unpacked exist', () => {
-      const setupPath = path.join(rootDir, 'release/Pipecal Pro Setup 2.0.0.exe');
-      const portablePath = path.join(rootDir, 'release/Pipecal Pro 2.0.0.exe');
+      const setupPath = path.join(rootDir, `release/Pipecal Pro Setup ${pkg.version}.exe`);
+      const portablePath = path.join(rootDir, `release/Pipecal Pro ${pkg.version}.exe`);
       const unpackedExe = path.join(rootDir, 'release/win-unpacked/Pipecal Pro.exe');
 
       expect(fs.existsSync(setupPath)).toBe(true);

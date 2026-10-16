@@ -1,6 +1,6 @@
 {
   "name": "pipecal-invoice-pro",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Polyethylene Pipes & Fittings Invoice & Pricing System",
   "main": "electron/main.cjs",
   "type": "module",
