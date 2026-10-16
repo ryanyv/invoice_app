@@ -112,6 +112,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [customerAddress, setCustomerAddress] = useState<string>('');
+  const [customerNationalId, setCustomerNationalId] = useState<string>('');
+  const [customerEconomicCode, setCustomerEconomicCode] = useState<string>('');
+  const [customerPostalCode, setCustomerPostalCode] = useState<string>('');
+  const [isOfficial, setIsOfficial] = useState<boolean>(false);
   const [explanation, setExplanation] = useState<string>('');
 
   // Items List
@@ -481,7 +485,14 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [includeCustomDiscount, setIncludeCustomDiscount] = useState<boolean>(false);
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
   const [includeTax, setIncludeTax] = useState<boolean>(false);
-  const [taxPercentage] = useState<number>(settings.taxRate || 10);
+  const [taxPercentage, setTaxPercentage] = useState<number>(settings.taxRate || 10);
+
+  // Sync taxPercentage when settings.taxRate changes (unless editing an existing finalized invoice)
+  useEffect(() => {
+    if (!editingSession || editingSession.isDuplicate) {
+      setTaxPercentage(settings.taxRate || 10);
+    }
+  }, [settings.taxRate, editingSession]);
 
   // Hydration tracking
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -495,6 +506,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       setCustomerName(inv.customerName || '');
       setCustomerPhone(inv.customerPhone || '');
       setCustomerAddress(inv.customerAddress || '');
+      setCustomerNationalId(inv.customerNationalId || '');
+      setCustomerEconomicCode(inv.customerEconomicCode || '');
+      setCustomerPostalCode(inv.customerPostalCode || '');
+      setIsOfficial(Boolean(inv.isOfficial));
       setExplanation(inv.explanation || '');
       setItems(inv.items ? JSON.parse(JSON.stringify(inv.items)) : []);
       setIncludeDiscount(Boolean(inv.includeDiscount));
@@ -502,6 +517,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       setIncludeCustomDiscount(Boolean(inv.includeCustomDiscount));
       setCustomDiscountAmount(inv.customDiscountAmount || 0);
       setIncludeTax(Boolean(inv.includeTax));
+      setTaxPercentage(typeof inv.taxPercentage === 'number' ? inv.taxPercentage : (settings.taxRate || 10));
       setIsHydrated(true);
       if (editingSession.isDuplicate) {
         notify(`فاکتور شماره ${inv.invoiceNumber} به عنوان پیش‌فاکتور جدید تکثیر گردید.`);
@@ -527,6 +543,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           if (validCustomerName) setCustomerName(validCustomerName);
           if (typeof draft.customerPhone === 'string') setCustomerPhone(draft.customerPhone);
           if (typeof draft.customerAddress === 'string') setCustomerAddress(draft.customerAddress);
+          if (typeof draft.customerNationalId === 'string') setCustomerNationalId(draft.customerNationalId);
+          if (typeof draft.customerEconomicCode === 'string') setCustomerEconomicCode(draft.customerEconomicCode);
+          if (typeof draft.customerPostalCode === 'string') setCustomerPostalCode(draft.customerPostalCode);
+          if (typeof draft.isOfficial === 'boolean') setIsOfficial(draft.isOfficial);
           if (typeof draft.explanation === 'string') setExplanation(draft.explanation);
           if (Array.isArray(draft.items)) {
             const sanitizedItems = draft.items.filter((item): item is InvoiceItem => Boolean(item && typeof item === 'object' && item.type));
@@ -537,6 +557,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           if (typeof draft.includeCustomDiscount === 'boolean') setIncludeCustomDiscount(draft.includeCustomDiscount);
           if (typeof draft.customDiscountAmount === 'number') setCustomDiscountAmount(draft.customDiscountAmount);
           if (typeof draft.includeTax === 'boolean') setIncludeTax(draft.includeTax);
+          if (typeof draft.taxPercentage === 'number') setTaxPercentage(draft.taxPercentage);
           notify('پیش‌نویس ذخیره‌شده فاکتور بازیابی گردید.');
         } else {
           const freshSettings = StorageService.getSettings();
@@ -563,6 +584,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       (typeof customerName === 'string' && customerName.trim().length > 0) ||
       (typeof customerPhone === 'string' && customerPhone.trim().length > 0) ||
       (typeof customerAddress === 'string' && customerAddress.trim().length > 0) ||
+      (typeof customerNationalId === 'string' && customerNationalId.trim().length > 0) ||
+      (typeof customerEconomicCode === 'string' && customerEconomicCode.trim().length > 0) ||
+      (typeof customerPostalCode === 'string' && customerPostalCode.trim().length > 0) ||
       (typeof explanation === 'string' && explanation.trim().length > 0);
 
     if (hasData) {
@@ -572,6 +596,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         customerName,
         customerPhone,
         customerAddress,
+        customerNationalId,
+        customerEconomicCode,
+        customerPostalCode,
+        isOfficial,
         explanation,
         items,
         includeDiscount,
@@ -579,6 +607,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         includeCustomDiscount,
         customDiscountAmount,
         includeTax,
+        taxPercentage,
         currencyUnit: activeCurrency,
       });
     } else {
@@ -591,24 +620,37 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     customerName,
     customerPhone,
     customerAddress,
+    customerNationalId,
+    customerEconomicCode,
+    customerPostalCode,
+    isOfficial,
     explanation,
     includeDiscount,
     discountPercentage,
     includeCustomDiscount,
     customDiscountAmount,
     includeTax,
+    taxPercentage,
     invoiceNumber,
     jalaliDate,
     activeCurrency,
   ]);
 
-  // Inline edit for pipe item: length and pricePerKg
+  // Inline edit for pipe item: length and pricePerKg (preserving existing packaging options)
   const handleUpdatePipeItem = (id: string, newLength: number, newPricePerKg: number) => {
     const len = Math.max(0, Number(newLength) || 0);
     const price = Math.max(0, Number(newPricePerKg) || 0);
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === id && item.type === 'pipe') {
+          const packagingOptions: PackagingOptions | undefined = item.packaging
+            ? {
+                preferredType: item.packaging.packagingType,
+                branchLength: item.packaging.unitLength === 12 ? 12 : 6,
+                coilLength:
+                  item.packaging.packagingType === 'coil' ? item.packaging.unitLength : undefined,
+              }
+            : undefined;
           const updated = computePipeItem(
             {
               peGrade: item.peGrade,
@@ -617,6 +659,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               pn: item.pn,
               length: len,
               pricePerKg: price,
+              packagingOptions,
             },
             weightTable,
             item.id
@@ -691,6 +734,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     if (matched) {
       setCustomerPhone(matched.phone || '');
       setCustomerAddress(matched.address || '');
+      setCustomerNationalId(matched.nationalId || '');
+      setCustomerEconomicCode(matched.economicCode || '');
+      setCustomerPostalCode(matched.postalCode || '');
+      if (matched.nationalId || matched.economicCode) {
+        setIsOfficial(true);
+      }
       if (matched.defaultDiscount && matched.defaultDiscount > 0) {
         if (matched.defaultDiscount <= 100) {
           setIncludeDiscount(true);
@@ -837,11 +886,16 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
+    setCustomerNationalId('');
+    setCustomerEconomicCode('');
+    setCustomerPostalCode('');
+    setIsOfficial(false);
     setIncludeDiscount(false);
     setDiscountPercentage(0);
     setIncludeCustomDiscount(false);
     setCustomDiscountAmount(0);
     setIncludeTax(false);
+    setTaxPercentage(settings.taxRate || 10);
     StorageService.clearDraft();
     onClearEditingSession?.();
     const freshSettings = StorageService.getSettings();
@@ -867,6 +921,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       customerName: customerName.trim() || 'مشتری آزاد',
       customerPhone: customerPhone.trim(),
       customerAddress: customerAddress.trim(),
+      customerNationalId: customerNationalId.trim() || undefined,
+      customerEconomicCode: customerEconomicCode.trim() || undefined,
+      customerPostalCode: customerPostalCode.trim() || undefined,
+      isOfficial,
       jalaliDate,
       items,
       subtotal: summary.subtotal,
@@ -905,6 +963,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         name: customerName.trim(),
         phone: customerPhone.trim(),
         address: customerAddress.trim(),
+        nationalId: customerNationalId.trim() || undefined,
+        economicCode: customerEconomicCode.trim() || undefined,
+        postalCode: customerPostalCode.trim() || undefined,
       });
     }
 
@@ -938,23 +999,23 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     onPreviewPrint(inv);
   };
 
-  // Reset Draft (Ctrl/Cmd+N)
-  const handleResetDraft = () => {
-    setInvoiceNumber(String(settings?.invoiceCounter || 1));
-    setJalaliDate(getCurrentJalaliDate());
-    setCustomerName('');
-    setCustomerPhone('');
-    setCustomerAddress('');
-    setExplanation('');
-    setItems([]);
-    notify('پیش‌فاکتور جدید بازنشانی شد.');
+  // Stable ref for global shortcut handlers so listeners bind only once on mount
+  const shortcutHandlersRef = useRef({
+    onSave: handleSaveInvoice,
+    onPreview: handlePreview,
+    onReset: resetToNewDraft,
+  });
+  shortcutHandlersRef.current = {
+    onSave: handleSaveInvoice,
+    onPreview: handlePreview,
+    onReset: resetToNewDraft,
   };
 
   // Listen for global shortcut events
   useEffect(() => {
-    const onSave = () => handleSaveInvoice();
-    const onPreview = () => handlePreview();
-    const onReset = () => handleResetDraft();
+    const onSave = () => shortcutHandlersRef.current.onSave();
+    const onPreview = () => shortcutHandlersRef.current.onPreview();
+    const onReset = () => shortcutHandlersRef.current.onReset();
 
     window.addEventListener('pipecal:save-invoice', onSave);
     window.addEventListener('pipecal:preview-invoice', onPreview);
@@ -965,7 +1026,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
       window.removeEventListener('pipecal:preview-invoice', onPreview);
       window.removeEventListener('pipecal:reset-draft', onReset);
     };
-  });
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -1047,7 +1108,21 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             <span>مشخصات پیش‌فاکتور و مشتری</span>
           </h2>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsOfficial((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isOfficial
+                  ? 'bg-amber-600/20 text-amber-300 border-amber-500/50 shadow-sm'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border-slate-700'
+              }`}
+              title="فعال‌سازی مشخصات مالیاتی خریدار برای صورتحساب رسمی ماده ۱۶۹"
+            >
+              <FileCheck className="w-3.5 h-3.5" />
+              <span>{isOfficial ? '✓ پیش‌فاکتور رسمی (ماده ۱۶۹)' : 'پیش‌فاکتور رسمی (ماده ۱۶۹)'}</span>
+            </button>
+
             <div className="flex items-center gap-2 text-sm bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700">
               <span className="text-slate-400">شماره پیش‌فاکتور:</span>
               <input
@@ -1112,6 +1187,44 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             />
           </div>
         </div>
+
+        {/* Official Tax Invoice Buyer Details (ماده ۱۶۹ م.م) */}
+        {(isOfficial || customerEconomicCode || customerNationalId || customerPostalCode) && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-700/70 animate-fade-in">
+            <div>
+              <label className="block text-xs text-amber-300/90 mb-1">شماره اقتصادی خریدار (ماده ۱۶۹):</label>
+              <input
+                type="text"
+                value={customerEconomicCode}
+                onChange={(e) => setCustomerEconomicCode(e.target.value)}
+                placeholder="مثال: ۴۱۱۴۵۶۷۸۹۱۲۳"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono text-left"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-amber-300/90 mb-1">شناسه ملی / کد ملی خریدار:</label>
+              <input
+                type="text"
+                value={customerNationalId}
+                onChange={(e) => setCustomerNationalId(e.target.value)}
+                placeholder="مثال: ۱۰۱۰۳۵۶۷۸۹۰"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono text-left"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-amber-300/90 mb-1">کد پستی ۱۰ رقمی خریدار:</label>
+              <input
+                type="text"
+                value={customerPostalCode}
+                onChange={(e) => setCustomerPostalCode(e.target.value)}
+                placeholder="مثال: ۱۵۴۸۷۶۳۲۱۱"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono text-left"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MIDDLE: Add Item Tabs (Pipe vs Fitting) */}

@@ -192,5 +192,14 @@ describe('MarketPriceService (Iranian Polymer Commodity & IME Prices)', () => {
       expect(fromStorage.basePipePrices.PE80).toBe(79900);
       expect(fromStorage.basePipePrices.PE63).toBe(71100);
     });
+
+    it('updateMarketItemPrice updates individual polymer price in cached snapshot', () => {
+      const updated = MarketPriceService.updateMarketItemPrice('ime_pe100_black', 92500);
+      const item = updated.items.find((i) => i.id === 'ime_pe100_black');
+      expect(item?.pricePerKgToman).toBe(92500);
+
+      const stored = MarketPriceService.getStoredMarketPrices();
+      expect(stored.items.find((i) => i.id === 'ime_pe100_black')?.pricePerKgToman).toBe(92500);
+    });
   });
 });

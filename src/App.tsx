@@ -53,8 +53,8 @@ export const App: React.FC = () => {
   };
 
   const handleDuplicateInvoice = (inv: Invoice) => {
-    const nextInvoiceNum = StorageService.getNextInvoiceNumber();
-    setSettings(StorageService.getSettings());
+    const freshSettings = StorageService.getSettings();
+    const nextInvoiceNum = String((freshSettings.invoiceCounter || 1) + 1);
     const duplicated: Invoice = {
       ...inv,
       id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -150,6 +150,7 @@ export const App: React.FC = () => {
             onInvoiceSaved={() => {
               setInvoices(StorageService.getInvoices());
               setSettings(StorageService.getSettings());
+              setCustomers(StorageService.getCustomers());
               setEditingSession(null);
             }}
             onUpdateSettings={setSettings}
@@ -164,6 +165,8 @@ export const App: React.FC = () => {
             onUpdateFittings={setFittings}
             discounts={discounts}
             onUpdateDiscounts={setDiscounts}
+            customers={customers}
+            onUpdateCustomers={setCustomers}
           />
         )}
 

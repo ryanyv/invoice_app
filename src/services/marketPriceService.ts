@@ -151,11 +151,20 @@ export class MarketPriceService {
 
       if (response && response.ok) {
         const data = await response.json();
-        // If structured data matches, parse live values
+        // If structured data matches, parse live values or preserve user-cached rates
         if (data && typeof data === 'object') {
+          const remotePrices: Record<string, number> =
+            data.prices && typeof data.prices === 'object' ? data.prices : {};
           const updatedItems = cached.items.map((item) => {
+            const livePrice =
+              typeof remotePrices[item.id] === 'number' && remotePrices[item.id] > 0
+                ? remotePrices[item.id]
+                : typeof remotePrices[item.grade] === 'number' && remotePrices[item.grade] > 0
+                ? remotePrices[item.grade]
+                : item.pricePerKgToman;
             return {
               ...item,
+              pricePerKgToman: livePrice,
               publishDate: getCurrentJalaliDate(),
             };
           });
@@ -182,6 +191,25 @@ export class MarketPriceService {
       isOnline: false,
       statusMessage: 'ارتباط اینترنت برقرار نیست؛ از آخرین نرخ رسمی ذخیره‌شده استفاده می‌شود (حالت آفلاین)',
     };
+  }
+
+  /**
+   * Updates a specific market item's price in the cached snapshot (for manual IME bulletin adjustments).
+   */
+  static updateMarketItemPrice(id: string, pricePerKgToman: number): MarketPriceSnapshot {
+    const current = this.getStoredMarketPrices();
+    const safePrice = Math.max(0, Math.round(pricePerKgToman));
+    const updated: MarketPriceSnapshot = {
+      ...current,
+      lastUpdated: getCurrentJalaliDate(),
+      items: current.items.map((item) =>
+        item.id === id
+          ? { ...item, pricePerKgToman: safePrice, publishDate: getCurrentJalaliDate() }
+          : item
+      ),
+    };
+    this.saveMarketPrices(updated);
+    return updated;
   }
 
   /**
