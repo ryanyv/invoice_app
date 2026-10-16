@@ -22,11 +22,54 @@ export function toPersianDigits(input: string | number): string {
 }
 
 /**
- * Formats a number with comma separators (e.g., 1,500,000)
+ * Converts Persian and Arabic digits in a string or number to English digits
  */
-export function formatNumber(num: number | string, usePersianDigits = false): string {
-  if (num === null || num === undefined || isNaN(Number(num))) return '۰';
-  const parts = Math.round(Number(num)).toString().split('.');
+export function toEnglishDigits(input: string | number): string {
+  if (input === null || input === undefined) return '';
+  const str = String(input);
+  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return str
+    .replace(/[۰-۹]/g, (w) => String(persianDigits.indexOf(w)))
+    .replace(/[٠-٩]/g, (w) => String(arabicDigits.indexOf(w)));
+}
+
+/**
+ * Safely parses a number from formatted string containing commas and Persian/Arabic digits
+ */
+export function parseFormattedNumber(input: string | number): number {
+  if (typeof input === 'number') return isNaN(input) ? 0 : input;
+  if (!input) return 0;
+  const clean = toEnglishDigits(input).replace(/,/g, '').trim();
+  const val = Number(clean);
+  return isNaN(val) ? 0 : val;
+}
+
+/**
+ * Formats a number with comma separators (e.g., 1,500,000) and optional decimal precision
+ */
+export function formatNumber(
+  num: number | string,
+  usePersianDigits = false,
+  decimals?: number
+): string {
+  if (num === null || num === undefined) {
+    return usePersianDigits ? '۰' : '0';
+  }
+  const cleanStr = typeof num === 'string' ? toEnglishDigits(num).replace(/,/g, '').trim() : String(num);
+  const n = Number(cleanStr);
+  if (isNaN(n)) {
+    return usePersianDigits ? '۰' : '0';
+  }
+
+  let fixedStr: string;
+  if (decimals !== undefined) {
+    fixedStr = n.toFixed(decimals);
+  } else {
+    fixedStr = String(n);
+  }
+
+  const parts = fixedStr.split('.');
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const formatted = parts.join('.');
   return usePersianDigits ? toPersianDigits(formatted) : formatted;

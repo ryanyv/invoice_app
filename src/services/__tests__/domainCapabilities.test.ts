@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest';
 import seedData from '../../data/seedData.json';
 import {
   isCoilAllowed,
@@ -27,12 +28,8 @@ function assertEqual<T>(actual: T, expected: T, message?: string) {
 
 const weightTable = seedData.weightTable as unknown as WeightTable;
 
-console.log('=== RUNNING PE DOMAIN CAPABILITIES TEST SUITE ===');
-
-// ---------------------------------------------------------------------------
-// 1. Packaging Rules: isCoilAllowed and computePackaging
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 1: Packaging Rules (isCoilAllowed & computePackaging) ---');
+describe('PE Domain Capabilities Test Suite', () => {
+  it('Test 1: Packaging Rules (isCoilAllowed & computePackaging)', () => {
 
 // Diameters <= 125mm must allow coil
 const coilAllowedSizes = [10, 12, 16, 20, 25, 32, 40, 50, 63, 75, 90, 110, 125];
@@ -81,13 +78,9 @@ assertEqual(packBranch6m.unitCount, 17); // ceil(100/6) = 17
 assertEqual(packBranch6m.nominalTotalLength, 102);
 assertEqual(packBranch6m.wasteOrSurplusMeters, 2);
 assertEqual(packBranch6m.labelPersian, '۱۷ شاخه ۶ متری');
+  });
 
-console.log('✓ Test 1 Passed: Packaging rules and calculations verified.');
-
-// ---------------------------------------------------------------------------
-// 2. Freight Vehicle Estimator: 5 Iranian Logistics Tiers & Dual Constraints
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 2: Freight Vehicle Estimator ---');
+  it('Test 2: Freight Vehicle Estimator: 5 Iranian Logistics Tiers & Dual Constraints', () => {
 
 // Verify 5 vehicle tiers definition
 assertEqual(FREIGHT_VEHICLES.length, 5);
@@ -150,13 +143,9 @@ assert(recLength6m.recommendationNote.includes('شاخه ۶ متری'), 'Should 
 const recZero = estimateFreightVehicle(0, 0);
 assertEqual(recZero.vehicleCount, 0);
 assertEqual(recZero.utilizationPercentage, 0);
+  });
 
-console.log('✓ Test 2 Passed: Freight vehicle estimator and dual constraints verified.');
-
-// ---------------------------------------------------------------------------
-// 3. Raw Material Cost Calculator (بورس کالا و هزینه تبدیل)
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 3: Raw Material Cost Calculator ---');
+  it('Test 3: Raw Material Cost Calculator (بورس کالا و هزینه تبدیل)', () => {
 
 // Natural polymer scenario: 85,000 polymer, 2% MB @ 130,000, 1.5% waste, 10,000 conv, 10% margin
 const costResult = calculateRawMaterialCost({
@@ -186,13 +175,9 @@ assertEqual(simpleCost.baseMaterialCostPerKg, 90000);
 assertEqual(simpleCost.wasteCostPerKg, 0);
 assertEqual(simpleCost.productionCostPerKg, 98000);
 assertEqual(simpleCost.suggestedPricePerKg, 98000);
+  });
 
-console.log('✓ Test 3 Passed: Raw material cost formulas verified.');
-
-// ---------------------------------------------------------------------------
-// 4. Reverse Pipe Calculations (Mass -> Length, Total -> Price/Kg, Budget -> Length)
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 4: Reverse Pipe Calculations ---');
+  it('Test 4: Reverse Pipe Calculations (Mass -> Length, Total -> Price/Kg, Budget -> Length)', () => {
 
 // 110mm SDR11 DIN weight = 3.14 kg/m
 assertEqual(weightTable[110][11], 3.14);
@@ -263,13 +248,9 @@ const revInvalid = calculateReversePipe(
   weightTable
 );
 assertEqual(revInvalid, null);
+  });
 
-console.log('✓ Test 4 Passed: Reverse pipe calculation functions verified.');
-
-// ---------------------------------------------------------------------------
-// 5. computePipeItem with Packaging & computeInvoiceSummary with Freight
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 5: Pipe Item Packaging & Invoice Summary Freight ---');
+  it('Test 5: Pipe Item Packaging & Invoice Summary Freight', () => {
 
 // Compute pipe item attaching packaging
 const pipeItem1 = computePipeItem(
@@ -306,13 +287,9 @@ assertEqual(summary.maxBranchLengthMeters, 12);
 assertEqual(summary.freight.vehicle.id, 'trailer_flatbed');
 assertEqual(summary.freight.isLengthConstrained, true);
 assertEqual(summary.freight.vehicleCount, 1);
+  });
 
-console.log('✓ Test 5 Passed: Invoice summary freight and pipe item packaging verified.');
-
-// ---------------------------------------------------------------------------
-// 6. Adversarial Boundary, Edge Cases & Multi-Pipe Mixed Shipments
-// ---------------------------------------------------------------------------
-console.log('\n--- Test 6: Boundary & Multi-Pipe Mixed Logistics Stress Tests ---');
+  it('Test 6: Boundary & Multi-Pipe Mixed Logistics Stress Tests', () => {
 
 // Boundary test: Diameter 125mm is the exact maximum allowed for coil
 assertEqual(isCoilAllowed(125), true, '125mm must allow coil');
@@ -370,8 +347,7 @@ const packZero = computePackaging(63, 0);
 assertEqual(packZero.unitCount, 0);
 assertEqual(packZero.wasteOrSurplusMeters, 0);
 
-console.log('✓ Test 6 Passed: Boundary conditions and mixed freight shipments verified.');
+    console.log('✓ Test 6 Passed: Boundary conditions and mixed freight shipments verified.');
+  });
+});
 
-console.log('\n======================================================');
-console.log('ALL PE DOMAIN CAPABILITIES TESTS PASSED SUCCESSFULLY! (6/6)');
-console.log('======================================================\n');

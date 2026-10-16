@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest';
 import seedData from '../../data/seedData.json';
 import {
   isCoilAllowed,
@@ -27,17 +28,10 @@ function assertEqual<T>(actual: T, expected: T, message?: string) {
 
 const weightTable = seedData.weightTable as unknown as WeightTable;
 
-console.log('================================================================');
-console.log('CHALLENGER 2 ADVERSARIAL STRESS TEST SUITE (M2 / R2)');
-console.log('================================================================');
+describe('Challenger 2 Adversarial Stress Test Suite', () => {
+  let passedAssertions = 0;
 
-let passedAssertions = 0;
-
-// =============================================================================
-// TEST 1: Adversarial Reverse Calculations
-// (Zero, Negative, Large Numbers, Invalid Diameters/SDRs, Sub-millimeter)
-// =============================================================================
-console.log('\n--- SUITE 1: Adversarial Reverse Calculations ---');
+  it('Suite 1: Adversarial Reverse Calculations', () => {
 
 // 1.1 Zero values
 assertEqual(calculateReversePipe({
@@ -240,15 +234,10 @@ const revFromForward = calculateReversePipe({
 assert(revFromForward !== null, 'Reverse from forward item should succeed');
 assert(Math.abs(revFromForward.calculatedLength - originalLength) <= 0.01,
   `Roundtrip length ${revFromForward.calculatedLength} should match original ${originalLength} within 0.01m tolerance`);
-passedAssertions++;
+    passedAssertions++;
+  });
 
-console.log(`✓ Suite 1 Passed: Reverse calculations robust against 0, negative, large, invalid inputs.`);
-
-
-// =============================================================================
-// TEST 2: Packaging Rules at Exact 125mm vs 140mm Boundary
-// =============================================================================
-console.log('\n--- SUITE 2: Packaging Rules at Exact 125mm vs 140mm Boundary ---');
+  it('Suite 2: Packaging Rules at Exact 125mm vs 140mm Boundary', () => {
 
 // 2.1 Direct isCoilAllowed boundary evaluations
 assertEqual(isCoilAllowed(125), true, '125.0mm is physically coillable and must return true');
@@ -363,15 +352,10 @@ const pNegSurplus = pNeg.wasteOrSurplusMeters;
 console.log(`[EMPIRICAL NOTE] computePackaging(140, -50).wasteOrSurplusMeters = ${pNegSurplus}`);
 // In current implementation, 0 - (-50) produces 50 due to double negative
 assertEqual(pNegSurplus, 50, 'Empirically confirms phantom surplus on negative length due to 0 - (-50)');
-passedAssertions += 6;
+    passedAssertions += 6;
+  });
 
-console.log(`✓ Suite 2 Passed: 125mm vs 140mm boundary strictly enforced across all packaging options.`);
-
-
-// =============================================================================
-// TEST 3: Freight Vehicle Estimator with Mixed Coils and 12m Branches
-// =============================================================================
-console.log('\n--- SUITE 3: Freight Estimator with Mixed Coils and 12m Branches ---');
+  it('Suite 3: Freight Estimator with Mixed Coils and 12m Branches', () => {
 
 // 3.1 Ultra-light weight mixed order:
 // Order has 1 coil of 32mm (length 50m, weight ~13.6 kg)
@@ -507,15 +491,10 @@ assertEqual(summaryFittingsOnly.totalPipeWeight, 0);
 assertEqual(summaryFittingsOnly.totalFittingCount, 20);
 assertEqual(summaryFittingsOnly.maxBranchLengthMeters, 0);
 assertEqual(summaryFittingsOnly.freight.vehicleCount, 0);
-passedAssertions += 4;
+    passedAssertions += 4;
+  });
 
-console.log(`✓ Suite 3 Passed: Freight estimator handles mixed coils, 12m branches, and capacity limits seamlessly.`);
-
-
-// =============================================================================
-// TEST 4: Raw Material Cost Calculation Adversarial Cases
-// =============================================================================
-console.log('\n--- SUITE 4: Raw Material Cost Calculation Adversarial Cases ---');
+  it('Suite 4: Raw Material Cost Calculation Adversarial Cases', () => {
 
 // 4.1 Zero costs and percentages
 const zeroCost = calculateRawMaterialCost({
@@ -540,10 +519,7 @@ const negParamCost = calculateRawMaterialCost({
 });
 assertEqual(negParamCost.baseMaterialCostPerKg, 90000);
 assertEqual(negParamCost.wasteCostPerKg, 0);
-passedAssertions += 2;
+    passedAssertions += 2;
+  });
+});
 
-console.log(`✓ Suite 4 Passed: Raw material cost formula verified under boundary parameters.`);
-
-console.log('\n================================================================');
-console.log(`ALL CHALLENGER ADVERSARIAL TESTS PASSED: ${passedAssertions} assertions verified cleanly!`);
-console.log('================================================================\n');

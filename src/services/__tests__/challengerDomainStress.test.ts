@@ -8,6 +8,7 @@
  * 4. Raw material cost and IME pricing breakdown equations.
  */
 
+import { describe, it } from 'vitest';
 import seedData from '../../data/seedData.json';
 import {
   isCoilAllowed,
@@ -37,16 +38,11 @@ function assertCloseTo(actual: number, expected: number, tolerance = 0.05, msg =
 
 const weightTable = seedData.weightTable as unknown as WeightTable;
 
-console.log('================================================================');
-console.log('       EMPIRICAL CHALLENGER STRESS HARNESS — MILESTONE M2       ');
-console.log('================================================================');
+describe('Challenger Empirical Domain Stress Test Harness', () => {
+  let totalAssertions = 0;
+  const diameters = Object.keys(weightTable).map(Number).sort((a, b) => a - b);
 
-let totalAssertions = 0;
-
-// ============================================================================
-// PART 1: REVERSE CALCULATIONS STRESS HARNESS (DIN 8074 STANDARD WEIGHTS)
-// ============================================================================
-console.log('\n>>> SUITE 1: Reverse Calculations against DIN 8074 Standard Weights');
+  it('Suite 1: Reverse Calculations against DIN 8074 Standard Weights', () => {
 
 // 1.1 Extract all valid pairs of (diameter, SDR) in the DIN weight table
 interface ValidPipeSpec {
@@ -56,7 +52,6 @@ interface ValidPipeSpec {
 }
 
 const validSpecs: ValidPipeSpec[] = [];
-const diameters = Object.keys(weightTable).map(Number).sort((a, b) => a - b);
 
 for (const d of diameters) {
   const sdrObj = weightTable[d];
@@ -168,12 +163,9 @@ assert(nullRev1 === null, 'targetTonnage = 0 must return null');
 const nullRev2 = calculateReversePipe({ mode: 'budget', diameter: 110, sdr: 11, peGrade: 'PE100', pricePerKg: 0, targetBudget: 1000000 }, weightTable);
 assert(nullRev2 === null, 'pricePerKg = 0 in budget mode must return null');
 totalAssertions += 10;
-console.log('✓ Suite 1 PASSED: Reverse calculations rigorously verified against DIN standards.');
+  });
 
-// ============================================================================
-// PART 2: PACKAGING UNIT COUNTS AND SURPLUS METERS STRESS HARNESS
-// ============================================================================
-console.log('\n>>> SUITE 2: Packaging Rules, Unit Counts & Surplus Meters');
+  it('Suite 2: Packaging Rules, Unit Counts & Surplus Meters', () => {
 
 // 2.1 Bending Radius & Coiling Rule Verification
 for (const d of diameters) {
@@ -259,12 +251,9 @@ for (const branchLen of branchSizes) {
   }
 }
 console.log(`- Completed ${packagingChecksCount} packaging unit count & surplus meter tests across configurations.`);
-console.log('✓ Suite 2 PASSED: Packaging calculations, unit counts, and surplus meters verified.');
+  });
 
-// ============================================================================
-// PART 3: FREIGHT VEHICLE ESTIMATOR STRESS HARNESS (100kg to 50,000kg, 0 to 12m)
-// ============================================================================
-console.log('\n>>> SUITE 3: Freight Vehicle Estimator across Weight Spectrum & Branch Lengths');
+  it('Suite 3: Freight Vehicle Estimator across Weight Spectrum & Branch Lengths', () => {
 
 // 3.1 Verify 5 Iranian Freight Vehicle specifications
 assert(FREIGHT_VEHICLES.length === 5, 'Must have exactly 5 freight vehicle tiers');
@@ -382,12 +371,9 @@ assert(recNeg.vehicleCount === 0, 'Negative weight must return 0 vehicle count')
 totalAssertions += 3;
 
 console.log(`- Completed ${freightChecksCount} freight estimator checks across the weight spectrum (100kg-50,000kg) and lengths (0-12m).`);
-console.log('✓ Suite 3 PASSED: Freight vehicle estimator and dual constraints verified.');
+  });
 
-// ============================================================================
-// PART 4: RAW MATERIAL COST CALCULATOR STRESS HARNESS (IME PRICING FORMULA)
-// ============================================================================
-console.log('\n>>> SUITE 4: Raw Material Cost & IME Formula Stress Tests');
+  it('Suite 4: Raw Material Cost & IME Formula Stress Tests', () => {
 
 let costChecksCount = 0;
 // Test parametric sweep of pricing components
@@ -435,13 +421,7 @@ for (const pPolymer of testPolymers) {
     }
   }
 }
-console.log(`- Completed ${costChecksCount} raw material IME formula parametric calculations.`);
-console.log('✓ Suite 4 PASSED: Raw material cost calculator equations verified.');
+  console.log(`- Completed ${costChecksCount} raw material IME formula parametric calculations.`);
+  });
+});
 
-// ============================================================================
-// FINAL SUMMARY
-// ============================================================================
-console.log('\n================================================================');
-console.log(`  ALL CHALLENGER EMPIRICAL TESTS PASSED! (${totalAssertions} assertions verified)  `);
-console.log('  VERDICT: APPROVE                                              ');
-console.log('================================================================\n');
