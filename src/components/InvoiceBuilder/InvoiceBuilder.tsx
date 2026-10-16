@@ -196,7 +196,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [reverseSdr, setReverseSdr] = useState<number>(11);
   const [reverseGrade, setReverseGrade] = useState<PipeGrade>('PE100');
   const [reversePn, setReversePn] = useState<number>(16);
-  const [reversePricePerKg, setReversePricePerKg] = useState<number>(() => settings?.basePipePrices?.PE100 || 95000);
+  const [reversePricePerKg, setReversePricePerKg] = useState<number>(() =>
+    getBasePipePriceForGrade('PE100', activeCurrency)
+  );
   const [reversePackagingType, setReversePackagingType] = useState<PackagingType>('coil');
   const [reverseBranchLength, setReverseBranchLength] = useState<6 | 12>(6);
   const [reverseCoilLength, setReverseCoilLength] = useState<number>(100);
@@ -216,12 +218,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     }
   }, [reverseGrade, reverseSdr, gradeSdrPn]);
 
-  // Sync reverse price with grade
+  // Sync reverse price with grade and active currency
   useEffect(() => {
-    if (settings?.basePipePrices?.[reverseGrade]) {
-      setReversePricePerKg(settings.basePipePrices[reverseGrade]);
-    }
-  }, [reverseGrade, settings?.basePipePrices]);
+    setReversePricePerKg(getBasePipePriceForGrade(reverseGrade, activeCurrency));
+  }, [reverseGrade, activeCurrency, settings?.basePipePrices]);
 
   // Sync packaging allowance for reverse diameter
   useEffect(() => {
@@ -270,11 +270,11 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   // --- RAW MATERIAL COST CALCULATOR STATE ---
   const [showCostModal, setShowCostModal] = useState<boolean>(false);
   const [costTargetForm, setCostTargetForm] = useState<'pipe' | 'reverse'>('pipe');
-  const [rawPolymerPrice, setRawPolymerPrice] = useState<number>(85000);
+  const [rawPolymerPrice, setRawPolymerPrice] = useState<number>(() => 85000 * (activeCurrency === 'ریال' ? 10 : 1));
   const [rawMasterbatchPct, setRawMasterbatchPct] = useState<number>(2.0);
-  const [rawMasterbatchPrice, setRawMasterbatchPrice] = useState<number>(130000);
+  const [rawMasterbatchPrice, setRawMasterbatchPrice] = useState<number>(() => 130000 * (activeCurrency === 'ریال' ? 10 : 1));
   const [rawWastePct, setRawWastePct] = useState<number>(1.5);
-  const [rawConversionCost, setRawConversionCost] = useState<number>(10000);
+  const [rawConversionCost, setRawConversionCost] = useState<number>(() => 10000 * (activeCurrency === 'ریال' ? 10 : 1));
   const [rawProfitMarginPct, setRawProfitMarginPct] = useState<number>(10);
 
   const rawCostResult = useMemo(() => {
@@ -333,6 +333,22 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     const updated = MarketPriceService.applyAllMarketPrices(marketSnapshot);
     onUpdateSettings?.(updated);
     notify('✓ نرخ‌های رسمی بورس کالا بر روی قیمت‌های پایه کل سیستم اعمال گردید.');
+  };
+
+  const handleOpenCostModal = (target: 'pipe' | 'reverse') => {
+    setCostTargetForm(target);
+    const targetGrade = target === 'pipe' ? pipeGrade : reverseGrade;
+    const mult = activeCurrency === 'ریال' ? 10 : 1;
+    const polymerItem = marketSnapshot.items.find((item) => item.grade === targetGrade) || marketSnapshot.items[0];
+    const mbItem = marketSnapshot.items.find((item) => item.grade === 'Masterbatch');
+    if (polymerItem) {
+      setRawPolymerPrice(polymerItem.pricePerKgToman * mult);
+    }
+    if (mbItem) {
+      setRawMasterbatchPrice(mbItem.pricePerKgToman * mult);
+    }
+    setRawConversionCost(10000 * mult);
+    setShowCostModal(true);
   };
 
   // --- FITTING FORM STATE ---
@@ -768,10 +784,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const handleApplyCostPrice = () => {
     if (costTargetForm === 'pipe') {
       setPipePricePerKg(rawCostResult.suggestedPricePerKg);
-      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${settings.currencyUnit}) در فرم لوله درج شد.`);
+      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${activeCurrency}) در فرم لوله درج شد.`);
     } else {
       setReversePricePerKg(rawCostResult.suggestedPricePerKg);
-      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${settings.currencyUnit}) در محاسبه معکوس درج شد.`);
+      notify(`نرخ پیشنهادی بورس کالا (${formatNumber(rawCostResult.suggestedPricePerKg)} ${activeCurrency}) در محاسبه معکوس درج شد.`);
     }
     setShowCostModal(false);
   };
@@ -1154,10 +1170,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 {/* Raw Material Cost Calculator Modal */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setCostTargetForm('pipe');
-                    setShowCostModal(true);
-                  }}
+                  onClick={() => handleOpenCostModal('pipe')}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-slate-600 transition-all cursor-pointer"
                 >
                   <Factory className="w-3.5 h-3.5" />
@@ -1253,7 +1266,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-slate-400 mb-1">بودجه کل پروژه ({settings.currencyUnit}):</label>
+                      <label className="block text-slate-400 mb-1">بودجه کل پروژه ({activeCurrency}):</label>
                       <input
                         type="number"
                         value={reverseTargetValue || ''}
@@ -1320,13 +1333,10 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                   {/* Reverse Price/Kg */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">قیمت هر کیلو ({settings.currencyUnit}):</label>
+                      <label className="text-slate-400">قیمت هر کیلو ({activeCurrency}):</label>
                       <button
                         type="button"
-                        onClick={() => {
-                          setCostTargetForm('reverse');
-                          setShowCostModal(true);
-                        }}
+                        onClick={() => handleOpenCostModal('reverse')}
                         className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
                       >
                         آنالیز بورس
@@ -1470,7 +1480,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                       <div>
                         <span className="text-slate-400 block">مبلغ کل این ردیف:</span>
                         <strong className="text-emerald-400 text-base font-bold font-mono">
-                          {formatPrice(reverseResult.totalPrice, settings.currencyUnit)}
+                          {formatPrice(reverseResult.totalPrice, activeCurrency)}
                         </strong>
                       </div>
                     </div>
@@ -1576,10 +1586,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     </label>
                     <button
                       type="button"
-                      onClick={() => {
-                        setCostTargetForm('pipe');
-                        setShowCostModal(true);
-                      }}
+                      onClick={() => handleOpenCostModal('pipe')}
                       className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
                     >
                       آنالیز بورس
@@ -2461,7 +2468,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">قیمت هر کیلو مستربچ دوده ({settings.currencyUnit}/kg):</label>
+                <label className="block text-slate-300 mb-1 font-medium">قیمت هر کیلو مستربچ دوده ({activeCurrency}/kg):</label>
                 <input
                   type="number"
                   value={rawMasterbatchPrice || ''}
@@ -2484,7 +2491,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">هزینه تبدیل و سربار کارخانه ({settings.currencyUnit}/kg):</label>
+                <label className="block text-slate-300 mb-1 font-medium">هزینه تبدیل و سربار کارخانه ({activeCurrency}/kg):</label>
                 <input
                   type="number"
                   value={rawConversionCost || ''}
@@ -2511,27 +2518,27 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
             <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-400">
                 <span>بهای مواد اولیه با احتساب دوده:</span>
-                <span className="font-mono text-slate-200">{formatNumber(rawCostResult.baseMaterialCostPerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-slate-200">{formatNumber(rawCostResult.baseMaterialCostPerKg)} {activeCurrency}</span>
               </div>
               <div className="flex justify-between items-center text-slate-400">
                 <span>هزینه افت ضایعات خط اکسترودر:</span>
-                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.wasteCostPerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.wasteCostPerKg)} {activeCurrency}</span>
               </div>
               <div className="flex justify-between items-center text-slate-400">
                 <span>هزینه تبدیل، برق و سربار تولید:</span>
-                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.conversionCostPerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.conversionCostPerKg)} {activeCurrency}</span>
               </div>
               <div className="flex justify-between items-center text-slate-300 font-semibold pt-1 border-t border-slate-800">
                 <span>بهای تمام‌شده تولید (Production Cost):</span>
-                <span className="font-mono text-blue-300">{formatNumber(rawCostResult.productionCostPerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-blue-300">{formatNumber(rawCostResult.productionCostPerKg)} {activeCurrency}</span>
               </div>
               <div className="flex justify-between items-center text-slate-400">
                 <span>سود ناخالص تولیدکننده:</span>
-                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.profitAmountPerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-slate-200">+ {formatNumber(rawCostResult.profitAmountPerKg)} {activeCurrency}</span>
               </div>
               <div className="flex justify-between items-center text-white font-bold text-sm pt-2 border-t-2 border-slate-800">
                 <span>نرخ فروش پیشنهادی هر کیلوگرم:</span>
-                <span className="font-mono text-emerald-400 text-base">{formatNumber(rawCostResult.suggestedPricePerKg)} {settings.currencyUnit}</span>
+                <span className="font-mono text-emerald-400 text-base">{formatNumber(rawCostResult.suggestedPricePerKg)} {activeCurrency}</span>
               </div>
             </div>
 
@@ -2551,7 +2558,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>اعمال این نرخ ({formatNumber(rawCostResult.suggestedPricePerKg)} {settings.currencyUnit})</span>
+                <span>اعمال این نرخ ({formatNumber(rawCostResult.suggestedPricePerKg)} {activeCurrency})</span>
               </button>
             </div>
           </div>
