@@ -14,7 +14,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
   settings,
   onBack,
 }) => {
-  const handlePrint = async () => {
+  const handlePrint = React.useCallback(async () => {
     // Check if running inside Electron with savePdf IPC
     if ((window as any).electronAPI?.savePdf) {
       const defaultName = `پیش_فاکتور_${invoice.invoiceNumber}_${invoice.customerName.replace(/\s+/g, '_')}.pdf`;
@@ -27,7 +27,22 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
     } else {
       window.print();
     }
-  };
+  }, [invoice]);
+
+  React.useEffect(() => {
+    const onTriggerPrint = () => {
+      handlePrint();
+    };
+    const onEscape = () => {
+      onBack();
+    };
+    window.addEventListener('pipecal:trigger-print', onTriggerPrint);
+    window.addEventListener('pipecal:escape', onEscape);
+    return () => {
+      window.removeEventListener('pipecal:trigger-print', onTriggerPrint);
+      window.removeEventListener('pipecal:escape', onEscape);
+    };
+  }, [handlePrint, onBack]);
 
   const pipeItems = invoice.items.filter((i): i is PipeItem => i.type === 'pipe');
   const fittingItems = invoice.items.filter((i): i is FittingItem => i.type === 'fitting');

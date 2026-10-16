@@ -432,6 +432,35 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     onPreviewPrint(inv);
   };
 
+  // Reset Draft (Ctrl/Cmd+N)
+  const handleResetDraft = () => {
+    setInvoiceNumber(String(settings?.invoiceCounter || 1));
+    setJalaliDate(getCurrentJalaliDate());
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+    setExplanation('');
+    setItems([]);
+    notify('پیش‌فاکتور جدید بازنشانی شد.');
+  };
+
+  // Listen for global shortcut events
+  useEffect(() => {
+    const onSave = () => handleSaveInvoice();
+    const onPreview = () => handlePreview();
+    const onReset = () => handleResetDraft();
+
+    window.addEventListener('pipecal:save-invoice', onSave);
+    window.addEventListener('pipecal:preview-invoice', onPreview);
+    window.addEventListener('pipecal:reset-draft', onReset);
+
+    return () => {
+      window.removeEventListener('pipecal:save-invoice', onSave);
+      window.removeEventListener('pipecal:preview-invoice', onPreview);
+      window.removeEventListener('pipecal:reset-draft', onReset);
+    };
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Toast Notification */}
