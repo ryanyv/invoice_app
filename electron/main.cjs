@@ -91,17 +91,23 @@ ipcMain.handle('save-pdf', async (event, { defaultName, landscape = true } = {})
   }
 
   try {
+    mainWindow.setBackgroundColor('#ffffff');
     const pdfData = await mainWindow.webContents.printToPDF({
       pageSize: 'A4',
       landscape: Boolean(landscape),
       printBackground: true,
-      margins: { marginType: 'custom', top: 0.3, bottom: 0.3, left: 0.3, right: 0.3 },
+      preferCSSPageSize: true,
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
     });
 
     fs.writeFileSync(filePath, pdfData);
     return { success: true, filePath };
   } catch (error) {
     return { success: false, error: error.message };
+  } finally {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setBackgroundColor('#0f172a');
+    }
   }
 });
 

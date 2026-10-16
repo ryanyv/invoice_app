@@ -90,7 +90,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
   const totalAmountWords = numberToPersianWords(invoice.totalAmount);
 
   return (
-    <div className="min-h-screen bg-slate-900 py-8 px-4 print:p-0 print:bg-white text-slate-900">
+    <div className="min-h-screen bg-slate-900 py-8 px-4 print:p-0 print:m-0 print:bg-white print:min-h-0 text-slate-900">
       {/* Dynamic Print Styles for A4 Page Orientation */}
       <style>{`
         @media print {
@@ -199,7 +199,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
 
       {/* Printable Sheet */}
       <div
-        className={`print-container mx-auto bg-white rounded-xl shadow-2xl print:shadow-none print:rounded-none border border-slate-200 text-black ${
+        className={`print-container mx-auto bg-white rounded-xl shadow-2xl print:shadow-none print:rounded-none print:border-none border border-slate-200 text-black ${
           isLandscape
             ? 'max-w-5xl p-8 sm:p-12 print:p-4 text-sm'
             : 'max-w-3xl p-6 sm:p-8 print:p-2 text-xs'
