@@ -7,6 +7,7 @@ import {
   Calculator,
   Layers,
   CheckCircle,
+  Check,
   FileCheck,
   Edit3,
   Copy,
@@ -2387,58 +2388,171 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 </div>
               </div>
 
-              {/* Polymer Grade Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-                {marketSnapshot.items.map((item) => {
-                  const displayPrice = activeCurrency === 'ریال' ? item.pricePerKgToman * 10 : item.pricePerKgToman;
-                  const isSelected = item.grade === 'Masterbatch'
-                    ? rawMasterbatchPrice === displayPrice
-                    : rawPolymerPrice === displayPrice;
+              {/* Categorized Market Prices: 1. Polyethylene Resins, 2. Masterbatch */}
+              <div className="space-y-4 pt-1">
+                {/* Section A: Polymer Resins (Base Material) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold border-b border-slate-800/80 pb-1">
+                    <span className="flex items-center gap-1.5 text-blue-400">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                      <span>رزین‌های پایه پلی‌اتیلن لوله (بورس کالا)</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      انتخاب برای «قیمت پایه پلیمر»
+                    </span>
+                  </div>
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500/30'
-                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="font-bold text-white text-xs">{item.name}</span>
-                          {item.changePercent !== undefined && (
-                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                              item.changePercent >= 0
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : 'bg-rose-500/10 text-rose-400'
-                            }`}>
-                              {item.changePercent >= 0 ? '+' : ''}{item.changePercent}%
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400">{item.producer} ({item.code})</div>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {marketSnapshot.items
+                      .filter((item) => item.grade !== 'Masterbatch')
+                      .map((item) => {
+                        const displayPrice = activeCurrency === 'ریال' ? item.pricePerKgToman * 10 : item.pricePerKgToman;
+                        const isSelected = rawPolymerPrice === displayPrice;
 
-                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-800/80">
-                        <div className="font-mono font-bold text-emerald-400 text-xs">
-                          {formatNumber(displayPrice)} {activeCurrency}/kg
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectMarketItem(item)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
-                            isSelected
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                          }`}
-                        >
-                          {isSelected ? '✓ انتخاب شده' : 'انتخاب برای فرمول'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-blue-950/40 border-blue-500/60 ring-1 ring-blue-500/40'
+                                : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <span className="font-bold text-white text-xs leading-snug">{item.name}</span>
+                                {item.changePercent !== undefined && (
+                                  <span
+                                    dir="ltr"
+                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded inline-flex shrink-0 ${
+                                      item.changePercent >= 0
+                                        ? 'bg-emerald-500/10 text-emerald-400'
+                                        : 'bg-rose-500/10 text-rose-400'
+                                    }`}
+                                  >
+                                    {item.changePercent >= 0 ? `+${item.changePercent}` : item.changePercent}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 leading-tight">{item.producer}</div>
+                              <div className="mt-1.5">
+                                <span
+                                  dir="ltr"
+                                  className="inline-block font-mono text-[10px] text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800"
+                                >
+                                  {item.code}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 mt-2.5 border-t border-slate-800/80">
+                              <div className="flex items-baseline gap-1 text-emerald-400 font-bold">
+                                <span className="font-mono text-sm">{formatNumber(displayPrice)}</span>
+                                <span className="text-[10px] text-slate-300 font-normal">{activeCurrency}/kg</span>
+                              </div>
+
+                              {isSelected ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-lg border border-blue-500/30">
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>پلیمر فعال</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectMarketItem(item)}
+                                  className="px-2 py-0.5 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+                                >
+                                  انتخاب نرخ
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Section B: Masterbatch Additive */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold border-b border-slate-800/80 pb-1">
+                    <span className="flex items-center gap-1.5 text-amber-400">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                      <span>افزودنی مستربچ دوده (Carbon Black)</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-normal">
+                      انتخاب برای «قیمت مستربچ دوده»
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {marketSnapshot.items
+                      .filter((item) => item.grade === 'Masterbatch')
+                      .map((item) => {
+                        const displayPrice = activeCurrency === 'ریال' ? item.pricePerKgToman * 10 : item.pricePerKgToman;
+                        const isSelected = rawMasterbatchPrice === displayPrice;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-amber-950/30 border-amber-500/50 ring-1 ring-amber-500/30'
+                                : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-1 mb-1.5">
+                                <span className="font-bold text-white text-xs leading-snug">{item.name}</span>
+                                {item.changePercent !== undefined && (
+                                  <span
+                                    dir="ltr"
+                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded inline-flex shrink-0 ${
+                                      item.changePercent >= 0
+                                        ? 'bg-emerald-500/10 text-emerald-400'
+                                        : 'bg-rose-500/10 text-rose-400'
+                                    }`}
+                                  >
+                                    {item.changePercent >= 0 ? `+${item.changePercent}` : item.changePercent}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 leading-tight">{item.producer}</div>
+                              <div className="mt-1.5">
+                                <span
+                                  dir="ltr"
+                                  className="inline-block font-mono text-[10px] text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800"
+                                >
+                                  {item.code}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 mt-2.5 border-t border-slate-800/80">
+                              <div className="flex items-baseline gap-1 text-amber-400 font-bold">
+                                <span className="font-mono text-sm">{formatNumber(displayPrice)}</span>
+                                <span className="text-[10px] text-slate-300 font-normal">{activeCurrency}/kg</span>
+                              </div>
+
+                              {isSelected ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>مستربچ فعال</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectMarketItem(item)}
+                                  className="px-2 py-0.5 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+                                >
+                                  انتخاب نرخ
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -2,7 +2,7 @@ import { CompanySettings, MarketPolymerItem, MarketPriceSnapshot, PolymerMarketG
 import { getCurrentJalaliDate } from './persianUtils';
 import { StorageService } from './storage';
 
-export const MARKET_STORAGE_KEY = 'pipecal_ime_market_prices_v1';
+export const MARKET_STORAGE_KEY = 'pipecal_ime_market_prices_v2';
 
 /**
  * Baseline official reference prices published by the National Petrochemical Company (NPC)
@@ -13,7 +13,7 @@ export const BASELINE_MARKET_ITEMS: MarketPolymerItem[] = [
   {
     id: 'ime_pe100_black',
     grade: 'PE100',
-    name: 'پلی‌اتیلن سنگین اکستروژن لوله PE100 (مشکی)',
+    name: 'پلی‌اتیلن لوله PE100 مشکی (خودرنگ)',
     producer: 'پتروشیمی جم / مارون / امیرکبیر',
     code: 'CRP100N / EX3',
     pricePerKgToman: 86500,
@@ -24,7 +24,7 @@ export const BASELINE_MARKET_ITEMS: MarketPolymerItem[] = [
   {
     id: 'ime_pe100_natural',
     grade: 'PE100',
-    name: 'پلی‌اتیلن سنگین اکستروژن PE100 (نچرال / طبیعی)',
+    name: 'پلی‌اتیلن لوله PE100 نچرال (طبیعی)',
     producer: 'پتروشیمی شازند / جم / ایلام',
     code: 'PE100 Natural',
     pricePerKgToman: 84000,
@@ -35,7 +35,7 @@ export const BASELINE_MARKET_ITEMS: MarketPolymerItem[] = [
   {
     id: 'ime_pe80_pipe',
     grade: 'PE80',
-    name: 'پلی‌اتیلن سنگین لوله PE80 (اکستروژن)',
+    name: 'پلی‌اتیلن لوله PE80 اکستروژن',
     producer: 'پتروشیمی تبریز / امیرکبیر / جم',
     code: 'HDPE PE80',
     pricePerKgToman: 78500,
@@ -46,9 +46,9 @@ export const BASELINE_MARKET_ITEMS: MarketPolymerItem[] = [
   {
     id: 'ime_pe63_pipe',
     grade: 'PE63',
-    name: 'پلی‌اتیلن لوله گرید PE63',
+    name: 'پلی‌اتیلن لوله PE63',
     producer: 'پتروشیمی باختر / آریا ساسول',
-    code: 'PE63 Pipe Grade',
+    code: 'PE63 Pipe',
     pricePerKgToman: 72000,
     changePercent: 0.0,
     market: 'دفتر توسعه صنایع تکمیلی پتروشیمی',
@@ -57,9 +57,9 @@ export const BASELINE_MARKET_ITEMS: MarketPolymerItem[] = [
   {
     id: 'ime_masterbatch_black',
     grade: 'Masterbatch',
-    name: 'مستربچ دوده ۴۰٪ مخصوص لوله پلی‌اتیلن',
-    producer: 'تولیدکنندگان معتبر داخلی (گرید P)',
-    code: 'Carbon Black 40%',
+    name: 'مستربچ دوده ۴۰٪ لوله',
+    producer: 'تولیدکنندگان معتبر داخلی',
+    code: 'Black 40% Grade P',
     pricePerKgToman: 135000,
     changePercent: 2.1,
     market: 'بازار رسمی مواد اولیه تکمیلی',
