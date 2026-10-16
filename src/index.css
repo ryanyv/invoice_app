@@ -76,5 +76,66 @@
     size: auto;
     margin: 8mm;
   }
+
+  /* Modal print handling: Hide everything outside the modal when printing */
+  body.printing-modal #root > div > header,
+  body.printing-modal #root > div > main > *:not(.printable-modal-overlay),
+  body:has(.printable-modal-overlay) #root > div > header,
+  body:has(.printable-modal-overlay) #root > div > main > *:not(.printable-modal-overlay) {
+    display: none !important;
+  }
+
+  .printable-modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .printable-modal-overlay .printable-modal-card {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .printable-modal-overlay .printable-scroll-canvas {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
 }
 

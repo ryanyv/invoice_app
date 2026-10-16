@@ -51,6 +51,7 @@ export const App: React.FC = () => {
   // Modals & Full views
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [accountingTargetCustomerId, setAccountingTargetCustomerId] = useState<string | null>(null);
 
   // Active editing session: { invoice, isDuplicate }
   const [editingSession, setEditingSession] = useState<{
@@ -225,7 +226,10 @@ export const App: React.FC = () => {
             onPreviewPrintInvoice={(inv) => setPreviewInvoice(inv)}
             onEditInvoice={handleEditInvoice}
             onDuplicateInvoice={handleDuplicateInvoice}
-            onNavigateToAccounting={() => setActiveTab('accounting')}
+            onNavigateToAccounting={(customerId) => {
+              setAccountingTargetCustomerId(customerId || null);
+              setActiveTab('accounting');
+            }}
           />
         )}
 
@@ -238,6 +242,11 @@ export const App: React.FC = () => {
             settings={settings}
             onStartInvoiceForCustomer={handleStartInvoiceForCustomer}
             onPreviewPrintInvoice={(inv) => setPreviewInvoice(inv)}
+            initialCustomerId={accountingTargetCustomerId}
+            onClearInitialCustomer={() => setAccountingTargetCustomerId(null)}
+            onNavigateToCustomer={(_customerId) => {
+              setActiveTab('customers');
+            }}
           />
         )}
 

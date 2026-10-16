@@ -6,7 +6,12 @@ import {
   InvoiceSettlementInfo,
   PaymentRecord,
 } from '../types';
-import { formatNumber, toPersianDigits } from './persianUtils';
+import {
+  formatNumber,
+  normalizePersianText,
+  toEnglishDigits,
+  toPersianDigits,
+} from './persianUtils';
 
 export interface CustomerLedgerEntry {
   id: string;
@@ -32,6 +37,7 @@ export interface CustomerStatementReport {
   finalBalance: number;
   diagnosis: 'بدهکار' | 'بستانکار' | 'تسویه';
   generatedDate: string;
+  currencyUnit?: string;
 }
 
 export interface OfficialTaxRow {
@@ -52,20 +58,82 @@ export interface OfficialTaxRow {
 export class AccountingService {
   /**
    * Normalizes strings for robust matching between customers, invoices, and payments
+   * Uses Persian/Arabic character, zero-width, and whitespace unification
    */
   static normalize(str?: string): string {
-    return (str || '').trim().toLowerCase();
+    return normalizePersianText(str);
+  }
+
+  /**
+   * Converts an amount between Rial and Toman (1 Toman = 10 Rials)
+   */
+  static toTargetCurrency(
+    amount: number,
+    sourceCurrency: string | undefined,
+    targetCurrency: 'تومان' | 'ریال' = 'تومان'
+  ): number {
+    const num = Number(amount) || 0;
+    const src = (sourceCurrency || targetCurrency).trim();
+    const tgt = targetCurrency.trim();
+    if (src === tgt) return num;
+    if (src === 'ریال' && tgt === 'تومان') {
+      return Math.round(num / 10);
+    }
+    if (src === 'تومان' && tgt === 'ریال') {
+      return num * 10;
+    }
+    return num;
   }
 
   /**
    * Computes financial summaries for all customers
+   * Gathers registered customers and any orphan customers present in invoices/payments
+   * Strictly normalizes mixed currencies (Rial vs Toman) into targetCurrency
    */
   static computeCustomerSummaries(
     customers: Customer[],
     invoices: Invoice[],
-    payments: PaymentRecord[]
+    payments: PaymentRecord[],
+    targetCurrency: 'تومان' | 'ریال' = 'تومان'
   ): CustomerAccountSummary[] {
-    return customers.map((cust) => {
+    // 1. Index registered customers preserving their original order
+    const customerMap = new Map<string, { id: string; name: string }>();
+    customers.forEach((c) => {
+      if (c && c.name && c.name.trim()) {
+        const norm = this.normalize(c.name);
+        if (!customerMap.has(norm)) {
+          customerMap.set(norm, { id: c.id, name: c.name.trim() });
+        }
+      }
+    });
+
+    // 2. Discover any orphan customers from invoices not yet in the customer registry
+    invoices.forEach((inv) => {
+      if (inv && inv.customerName && inv.customerName.trim()) {
+        const norm = this.normalize(inv.customerName);
+        if (!customerMap.has(norm)) {
+          customerMap.set(norm, {
+            id: 'cust_inv_' + encodeURIComponent(norm.slice(0, 20)),
+            name: inv.customerName.trim(),
+          });
+        }
+      }
+    });
+
+    // 3. Discover any orphan customers from payments
+    payments.forEach((p) => {
+      if (p && p.customerName && p.customerName.trim()) {
+        const norm = this.normalize(p.customerName);
+        if (!customerMap.has(norm)) {
+          customerMap.set(norm, {
+            id: p.customerId || ('cust_pay_' + encodeURIComponent(norm.slice(0, 20))),
+            name: p.customerName.trim(),
+          });
+        }
+      }
+    });
+
+    return Array.from(customerMap.values()).map((cust) => {
       const custNormName = this.normalize(cust.name);
 
       // Invoices for this customer
@@ -73,7 +141,7 @@ export class AccountingService {
         (inv) => this.normalize(inv.customerName) === custNormName
       );
       const totalInvoiced = custInvoices.reduce(
-        (sum, inv) => sum + (Number(inv.totalAmount) || 0),
+        (sum, inv) => sum + this.toTargetCurrency(inv.totalAmount, inv.currencyUnit, targetCurrency),
         0
       );
 
@@ -85,14 +153,17 @@ export class AccountingService {
 
       // Cleared payments contribute to totalPaid
       const clearedPayments = custPayments.filter((p) => p.status === 'cleared');
-      const totalPaid = clearedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalPaid = clearedPayments.reduce(
+        (sum, p) => sum + this.toTargetCurrency(p.amount, p.currencyUnit, targetCurrency),
+        0
+      );
 
       // Pending cheques (in-process collections)
       const pendingCheques = custPayments.filter(
         (p) => p.status === 'pending' && p.method === 'cheque'
       );
       const totalPendingCheques = pendingCheques.reduce(
-        (sum, p) => sum + (Number(p.amount) || 0),
+        (sum, p) => sum + this.toTargetCurrency(p.amount, p.currencyUnit, targetCurrency),
         0
       );
 
@@ -127,22 +198,33 @@ export class AccountingService {
 
   /**
    * Computes settlement tracking info for all invoices
+   * Validates customer matching to prevent cross-customer invoice collision
+   * Correctly converts payment currencies into the invoice's currencyUnit
    */
   static computeInvoiceSettlementList(
     invoices: Invoice[],
     payments: PaymentRecord[]
   ): InvoiceSettlementInfo[] {
     return invoices.map((inv) => {
-      // Find payments explicitly tied to this invoice by invoiceId or invoiceNumber
+      const invNormName = this.normalize(inv.customerName);
+      const targetUnit = (inv.currencyUnit as 'تومان' | 'ریال') || 'تومان';
+
+      // Find payments explicitly tied to this invoice by invoiceId or invoiceNumber (customer-isolated)
       const matchedPayments = payments.filter((p) => {
         if (p.invoiceId && p.invoiceId === inv.id) return true;
-        if (p.invoiceNumber && p.invoiceNumber === inv.invoiceNumber) return true;
+        if (p.invoiceNumber && p.invoiceNumber === inv.invoiceNumber) {
+          // If payment has customer info, enforce customer isolation
+          if (p.customerName && this.normalize(p.customerName) !== invNormName) {
+            return false;
+          }
+          return true;
+        }
         return false;
       });
 
       const totalPaid = matchedPayments
         .filter((p) => p.status === 'cleared')
-        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        .reduce((sum, p) => sum + this.toTargetCurrency(p.amount, p.currencyUnit, targetUnit), 0);
 
       const invTotal = Number(inv.totalAmount) || 0;
       const remainingAmount = Math.max(0, invTotal - totalPaid);
@@ -160,7 +242,7 @@ export class AccountingService {
         customerName: inv.customerName,
         date: inv.jalaliDate,
         totalAmount: invTotal,
-        currencyUnit: inv.currencyUnit || 'تومان',
+        currencyUnit: targetUnit,
         paidAmount: totalPaid,
         remainingAmount,
         status,
@@ -171,12 +253,15 @@ export class AccountingService {
 
   /**
    * Generates a standard double-entry customer ledger statement (کارت حساب معین خریدار)
+   * Strictly normalizes debits and credits to targetCurrency (Toman or Rial)
+   * Sorts chronologically using normalized date digits
    */
   static generateCustomerStatement(
     customer: Customer,
     invoices: Invoice[],
     payments: PaymentRecord[],
-    currentDate: string
+    currentDate: string,
+    targetCurrency: 'تومان' | 'ریال' = 'تومان'
   ): CustomerStatementReport {
     const custNormName = this.normalize(customer.name);
 
@@ -208,14 +293,18 @@ export class AccountingService {
 
     // Map Invoices -> Debits
     for (const inv of custInvoices) {
-      const invAmt = Number(inv.totalAmount) || 0;
+      const invAmt = this.toTargetCurrency(inv.totalAmount, inv.currencyUnit, targetCurrency);
       const isOfficial = Boolean(inv.isOfficial);
+      let desc = `فاکتور فروش شماره ${inv.invoiceNumber} (${isOfficial ? 'رسمی ماده ۱۶۹' : 'پیش‌فاکتور عادی'}) - شامل ${inv.items.length} ردیف کالا`;
+      if (inv.currencyUnit && inv.currencyUnit !== targetCurrency) {
+        desc += ` (مبلغ ارزی: ${formatNumber(inv.totalAmount)} ${inv.currencyUnit})`;
+      }
       events.push({
         id: inv.id,
         date: inv.jalaliDate || currentDate,
         type: 'invoice',
         documentNumber: inv.invoiceNumber,
-        description: `فاکتور فروش شماره ${inv.invoiceNumber} (${isOfficial ? 'رسمی ماده ۱۶۹' : 'پیش‌فاکتور عادی'}) - شامل ${inv.items.length} ردیف کالا`,
+        description: desc,
         debit: invAmt,
         credit: 0,
         timestamp: new Date(inv.createdAt || Date.now()).getTime(),
@@ -232,13 +321,16 @@ export class AccountingService {
     };
 
     for (const p of custPayments) {
-      const pAmt = Number(p.amount) || 0;
+      const pAmt = this.toTargetCurrency(p.amount, p.currencyUnit, targetCurrency);
       const methodLabel = methodLabels[p.method] || p.method;
       let desc = `دریافت وجه (${methodLabel})`;
       if (p.bankName) desc += ` - بانک ${p.bankName}`;
       if (p.referenceNumber) desc += ` - پیگیری/شناسه: ${p.referenceNumber}`;
       if (p.chequeDueDate) desc += ` - سررسید چک: ${p.chequeDueDate}`;
       if (p.invoiceNumber) desc += ` - بابت فاکتور شماره ${p.invoiceNumber}`;
+      if (p.currencyUnit && p.currencyUnit !== targetCurrency) {
+        desc += ` (مبلغ ارزی: ${formatNumber(p.amount)} ${p.currencyUnit})`;
+      }
       if (p.notes) desc += ` (${p.notes})`;
 
       // Only cleared payments reduce ledger balance; pending cheques are tracked as pending documents
@@ -259,8 +351,10 @@ export class AccountingService {
 
     // Sort chronologically by date string (YYYY/MM/DD) and fallback timestamp
     events.sort((a, b) => {
-      if (a.date !== b.date) {
-        return a.date.localeCompare(b.date);
+      const dateA = toEnglishDigits(a.date);
+      const dateB = toEnglishDigits(b.date);
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
       }
       return a.timestamp - b.timestamp;
     });
@@ -299,7 +393,7 @@ export class AccountingService {
 
     const pendingCheques = custPayments
       .filter((p) => p.status === 'pending' && p.method === 'cheque')
-      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      .reduce((sum, p) => sum + this.toTargetCurrency(p.amount, p.currencyUnit, targetCurrency), 0);
 
     const finalBalance = runningBalance;
     let diagnosis: 'بدهکار' | 'بستانکار' | 'تسویه' = 'تسویه';
@@ -318,6 +412,7 @@ export class AccountingService {
       finalBalance,
       diagnosis,
       generatedDate: currentDate,
+      currencyUnit: targetCurrency,
     };
   }
 
@@ -402,15 +497,16 @@ export class AccountingService {
     report: CustomerStatementReport,
     settings: CompanySettings
   ): string {
+    const unit = report.currencyUnit || settings.currencyUnit || 'تومان';
     const headers = [
       'ردیف',
       'تاریخ',
       'نوع رویداد',
       'شماره سند / فاکتور',
       'شرح رویداد مالی',
-      'بدهکار',
-      'بستانکار',
-      'مانده حساب',
+      `بدهکار (${unit})`,
+      `بستانکار (${unit})`,
+      `مانده حساب (${unit})`,
       'وضعیت تشخیص',
     ];
 
@@ -436,10 +532,10 @@ export class AccountingService {
     const headerLines = [
       `صورت‌حساب گردش مالی خریدار: ${report.customer.name}`,
       `شرکت طرف حساب: ${settings.name} | تلفن: ${settings.phone}`,
-      `تاریخ تهیه گزارش: ${report.generatedDate}`,
+      `تاریخ تهیه گزارش: ${report.generatedDate} | واحد پول: ${unit}`,
       `شناسه ملی خریدار: ${report.customer.nationalId || '-'} | کد اقتصادی: ${report.customer.economicCode || '-'}`,
-      `مجموع بدهکار (فاکتورها): ${report.totalDebit} | مجموع بستانکار (دریافتی‌ها): ${report.totalCredit}`,
-      `مانده نهایی حساب: ${Math.abs(report.finalBalance)} (${report.diagnosis})`,
+      `مجموع بدهکار (فاکتورها): ${report.totalDebit} ${unit} | مجموع بستانکار (دریافتی‌ها): ${report.totalCredit} ${unit}`,
+      `مانده نهایی حساب: ${Math.abs(report.finalBalance)} ${unit} (${report.diagnosis})`,
       '',
     ];
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Receipt,
   Wallet,
@@ -46,6 +46,7 @@ import {
   getCurrentJalaliDate,
   numberToPersianWords,
   parseFormattedNumber,
+  toEnglishDigits,
   toPersianDigits,
 } from '../../services/persianUtils';
 
@@ -58,6 +59,8 @@ interface AccountingManagerProps {
   onNavigateToCustomer?: (customerId: string) => void;
   onStartInvoiceForCustomer: (customer: Customer) => void;
   onPreviewPrintInvoice: (invoice: Invoice) => void;
+  initialCustomerId?: string | null;
+  onClearInitialCustomer?: () => void;
 }
 
 type AccountingTab = 'customers' | 'payments' | 'invoices' | 'tax';
@@ -70,8 +73,11 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
   payments,
   onUpdatePayments,
   settings,
+  onNavigateToCustomer,
   onStartInvoiceForCustomer,
   onPreviewPrintInvoice,
+  initialCustomerId,
+  onClearInitialCustomer,
 }) => {
   const [activeTab, setActiveTab] = useState<AccountingTab>('customers');
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,8 +136,33 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
 
   // Calculate Customer Summaries
   const customerSummaries = useMemo(() => {
-    return AccountingService.computeCustomerSummaries(customers, invoices, payments);
-  }, [customers, invoices, payments]);
+    return AccountingService.computeCustomerSummaries(
+      customers,
+      invoices,
+      payments,
+      (settings.currencyUnit as any) || 'تومان'
+    );
+  }, [customers, invoices, payments, settings.currencyUnit]);
+
+  // Handle external navigation from CustomerManager
+  useEffect(() => {
+    if (initialCustomerId) {
+      setActiveTab('customers');
+      const targetCust =
+        customers.find((c) => c.id === initialCustomerId) ||
+        customerSummaries.find((s) => s.customerId === initialCustomerId);
+      if (targetCust) {
+        const custName = 'name' in targetCust ? targetCust.name : targetCust.customerName;
+        setSearchQuery(custName || '');
+        const custObj: Customer = customers.find((c) => c.id === initialCustomerId) || {
+          id: 'customerId' in targetCust ? targetCust.customerId : targetCust.id,
+          name: custName,
+        };
+        setActiveStatementCustomer(custObj);
+      }
+      onClearInitialCustomer?.();
+    }
+  }, [initialCustomerId, customers, customerSummaries, onClearInitialCustomer]);
 
   const customerSummariesMap = useMemo(() => {
     const map = new Map<string, (typeof customerSummaries)[0]>();
@@ -144,14 +175,24 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
     return AccountingService.computeInvoiceSettlementList(invoices, payments);
   }, [invoices, payments]);
 
-  // Overall Financial KPIs
+  // Overall Financial KPIs (strictly normalized to settings.currencyUnit)
   const kpis = useMemo(() => {
-    const totalSales = invoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+    const targetUnit = (settings.currencyUnit as 'تومان' | 'ریال') || 'تومان';
+    const totalSales = invoices.reduce(
+      (sum, inv) => sum + AccountingService.toTargetCurrency(inv.totalAmount, inv.currencyUnit, targetUnit),
+      0
+    );
     const clearedPayments = payments.filter((p) => p.status === 'cleared');
-    const totalReceived = clearedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalReceived = clearedPayments.reduce(
+      (sum, p) => sum + AccountingService.toTargetCurrency(p.amount, p.currencyUnit, targetUnit),
+      0
+    );
 
     const pendingChequesList = payments.filter((p) => p.status === 'pending' && p.method === 'cheque');
-    const totalPendingCheques = pendingChequesList.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalPendingCheques = pendingChequesList.reduce(
+      (sum, p) => sum + AccountingService.toTargetCurrency(p.amount, p.currencyUnit, targetUnit),
+      0
+    );
 
     // Total outstanding receivables from debtor customers
     let totalReceivables = 0;
@@ -168,7 +209,10 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
 
     // Official VAT (10%)
     const officialInvoices = invoices.filter((i) => Boolean(i.isOfficial));
-    const officialVatTotal = officialInvoices.reduce((sum, i) => sum + (Number(i.taxAmount) || 0), 0);
+    const officialVatTotal = officialInvoices.reduce(
+      (sum, i) => sum + AccountingService.toTargetCurrency(i.taxAmount, i.currencyUnit, targetUnit),
+      0
+    );
 
     return {
       totalSales,
@@ -183,7 +227,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
       totalInvoicesCount: invoices.length,
       totalPaymentsCount: payments.length,
     };
-  }, [invoices, payments, customerSummaries]);
+  }, [invoices, payments, customerSummaries, settings.currencyUnit]);
 
   // Filtered Customer Summaries
   const filteredCustomerSummaries = useMemo(() => {
@@ -263,7 +307,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
 
   // Open Payment Modal for adding or editing
   const handleOpenPaymentModal = (preset?: {
-    customer?: Customer;
+    customer?: Customer | { id: string; name: string };
     invoice?: Invoice;
     payment?: PaymentRecord;
   }) => {
@@ -285,14 +329,31 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
       });
     } else {
       setEditingPayment(null);
-      const cust = preset?.customer || (preset?.invoice ? customers.find((c) => c.name === preset.invoice?.customerName) : null);
+      const cust =
+        preset?.customer ||
+        (preset?.invoice
+          ? customers.find(
+              (c) =>
+                AccountingService.normalize(c.name) ===
+                AccountingService.normalize(preset.invoice?.customerName)
+            )
+          : null);
       const inv = preset?.invoice;
       const invSettlement = inv ? invoiceSettlements.find((s) => s.invoiceId === inv.id) : null;
-      const suggestedAmount = invSettlement ? invSettlement.remainingAmount : 0;
+      const suggestedAmount = invSettlement
+        ? AccountingService.toTargetCurrency(
+            invSettlement.remainingAmount,
+            invSettlement.currencyUnit,
+            (settings.currencyUnit as any) || 'تومان'
+          )
+        : 0;
+
+      const targetCustomerName =
+        preset?.customer?.name || inv?.customerName || (customers[0]?.name ?? '');
 
       setPaymentForm({
         customerId: cust?.id || '',
-        customerName: cust?.name || inv?.customerName || (customers[0]?.name ?? ''),
+        customerName: targetCustomerName,
         invoiceId: inv?.id || '',
         invoiceNumber: inv?.invoiceNumber || '',
         amount: suggestedAmount > 0 ? formatNumber(suggestedAmount) : '',
@@ -310,7 +371,9 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
 
   // Handle Customer Selection in Payment Modal
   const handleCustomerSelectInModal = (selectedName: string) => {
-    const cust = customers.find((c) => c.name === selectedName);
+    const cust = customers.find(
+      (c) => AccountingService.normalize(c.name) === AccountingService.normalize(selectedName)
+    );
     setPaymentForm((prev) => ({
       ...prev,
       customerName: selectedName,
@@ -341,13 +404,18 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
     if (!inv) return;
 
     const settlement = invoiceSettlements.find((s) => s.invoiceId === inv.id);
-    const remaining = settlement ? settlement.remainingAmount : inv.totalAmount;
+    const remaining = settlement ? settlement.remainingAmount : (inv.totalAmount || 0);
+    const convertedRemaining = AccountingService.toTargetCurrency(
+      remaining,
+      inv.currencyUnit || 'تومان',
+      (settings.currencyUnit as any) || 'تومان'
+    );
 
     setPaymentForm((prev) => ({
       ...prev,
       invoiceId: inv.id,
       invoiceNumber: inv.invoiceNumber,
-      amount: remaining > 0 ? formatNumber(remaining) : prev.amount,
+      amount: convertedRemaining > 0 ? formatNumber(convertedRemaining) : prev.amount,
       notes: prev.notes || `بابت تسویه فاکتور شماره ${inv.invoiceNumber}`,
     }));
   };
@@ -824,10 +892,28 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                       const isSettled = summary.balanceStatus === 'settled';
                       const isCreditor = summary.balanceStatus === 'creditor';
 
+                      const effectiveCust: Customer = cust || {
+                        id: summary.customerId,
+                        name: summary.customerName,
+                      };
+
                       return (
                         <tr key={summary.customerId} className="hover:bg-slate-700/30 transition-colors">
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-white text-sm">{summary.customerName}</div>
+                            <div className="font-bold text-white text-sm">
+                              {onNavigateToCustomer && cust ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onNavigateToCustomer(cust.id)}
+                                  className="text-white hover:text-blue-400 transition-colors text-right cursor-pointer"
+                                  title="مشاهده پرونده خریدار در بخش مشتریان"
+                                >
+                                  {summary.customerName}
+                                </button>
+                              ) : (
+                                <span>{summary.customerName}</span>
+                              )}
+                            </div>
                             {cust?.address && (
                               <div className="text-xs text-slate-400 truncate max-w-xs">{cust.address}</div>
                             )}
@@ -895,7 +981,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               {/* Quick Record Payment */}
                               <button
-                                onClick={() => handleOpenPaymentModal({ customer: cust })}
+                                onClick={() => handleOpenPaymentModal({ customer: effectiveCust })}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
                                 title="ثبت سند دریافت جدید برای این مشتری"
                               >
@@ -905,7 +991,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
 
                               {/* Customer Account Statement */}
                               <button
-                                onClick={() => setActiveStatementCustomer(cust || { id: summary.customerId, name: summary.customerName })}
+                                onClick={() => setActiveStatementCustomer(effectiveCust)}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition-colors cursor-pointer"
                                 title="مشاهده و چاپ صورت‌حساب رسمی معین خریدار"
                               >
@@ -914,15 +1000,13 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                               </button>
 
                               {/* Quick New Invoice */}
-                              {cust && (
-                                <button
-                                  onClick={() => onStartInvoiceForCustomer(cust)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                                  title="صدور پیش‌فاکتور جدید برای این مشتری"
-                                >
-                                  <ArrowUpRight className="w-4 h-4" />
-                                </button>
-                              )}
+                              <button
+                                onClick={() => onStartInvoiceForCustomer(effectiveCust)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                title="صدور پیش‌فاکتور جدید برای این مشتری"
+                              >
+                                <ArrowUpRight className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1487,7 +1571,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                   required
                   value={paymentForm.amount}
                   onChange={(e) => {
-                    const clean = e.target.value.replace(/[^0-9]/g, '');
+                    const clean = toEnglishDigits(e.target.value).replace(/[^0-9]/g, '');
                     setPaymentForm({ ...paymentForm, amount: clean ? formatNumber(clean) : '' });
                   }}
                   placeholder="مثال: ۲۵,۰۰۰,۰۰۰"
@@ -1502,7 +1586,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                   type="text"
                   required
                   value={paymentForm.paymentDate}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: toEnglishDigits(e.target.value) })}
                   placeholder="۱۴۰۳/۰۷/۲۵"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono text-left focus:border-emerald-500 focus:outline-none"
                 />
@@ -1574,7 +1658,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                 <input
                   type="text"
                   value={paymentForm.referenceNumber}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: toEnglishDigits(e.target.value) })}
                   placeholder="مثال: ۱۰۲۵۴۸۷۹۶۳..."
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono text-left focus:border-emerald-500 focus:outline-none"
                 />
@@ -1587,7 +1671,7 @@ export const AccountingManager: React.FC<AccountingManagerProps> = ({
                   <input
                     type="text"
                     value={paymentForm.chequeDueDate}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, chequeDueDate: e.target.value })}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, chequeDueDate: toEnglishDigits(e.target.value) })}
                     placeholder="مثال: ۱۴۰۳/۰۹/۱۵"
                     className="w-full bg-slate-900 border border-indigo-500/50 rounded-xl px-3 py-2 text-sm text-indigo-300 font-mono text-left focus:border-indigo-400 focus:outline-none"
                   />
@@ -1679,31 +1763,67 @@ const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   onClose,
   onShowToast,
 }) => {
-  const report: CustomerStatementReport = useMemo(() => {
-    return AccountingService.generateCustomerStatement(customer, invoices, payments, currentDate);
-  }, [customer, invoices, payments, currentDate]);
-
   const currencyUnit = settings.currencyUnit || 'تومان';
 
-  // Handle Print
-  const handlePrint = () => {
-    window.print();
+  const report: CustomerStatementReport = useMemo(() => {
+    return AccountingService.generateCustomerStatement(
+      customer,
+      invoices,
+      payments,
+      currentDate,
+      (settings.currencyUnit as any) || 'تومان'
+    );
+  }, [customer, invoices, payments, currentDate, settings.currencyUnit]);
+
+  // Handle Print & PDF export (supports Electron IPC savePdf and standard browser print)
+  const handlePrint = async () => {
+    document.body.classList.add('printing-modal');
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.savePdf) {
+      const cleanCust = customer.name.trim().replace(/\s+/g, '_');
+      const cleanDate = toEnglishDigits(currentDate).replace(/\//g, '-');
+      const defaultName = `صورتحساب_${cleanCust}_${cleanDate}.pdf`;
+      const res = await (window as any).electronAPI.savePdf({
+        defaultName,
+        landscape: false,
+      });
+      document.body.classList.remove('printing-modal');
+      if (res?.success) {
+        onShowToast(`فایل PDF صورت‌حساب در مسیر ${res.filePath} ذخیره شد.`);
+      } else if (!res?.canceled) {
+        window.print();
+      }
+    } else {
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-modal'), 1000);
+    }
   };
 
-  // Handle CSV Download
+  // Handle CSV Download (supports Electron IPC exportFile)
   const handleDownloadCsv = () => {
     const csv = AccountingService.exportCustomerStatementToCsv(report, settings);
+    const cleanCust = customer.name.trim().replace(/\s+/g, '_');
+    const defaultName = `statement_${cleanCust}_${Date.now()}.csv`;
+
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.exportFile) {
+      (window as any).electronAPI
+        .exportFile({ defaultName, content: csv, extensions: ['csv'] })
+        .then((res: any) => {
+          if (res?.success) onShowToast('فایل اکسل صورت‌حساب مشتری با موفقیت ذخیره شد.');
+        });
+      return;
+    }
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `statement_${customer.name}_${Date.now()}.csv`;
+    a.download = defaultName;
     a.click();
     URL.revokeObjectURL(url);
     onShowToast('فایل اکسل صورت‌حساب مشتری دانلود شد.');
   };
 
-  // Copy Summary to WhatsApp
+  // Copy Summary to WhatsApp with robust clipboard fallback
   const handleCopySummary = async () => {
     const diagText =
       report.diagnosis === 'بدهکار'
@@ -1728,17 +1848,41 @@ const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
       .filter(Boolean)
       .join('\n');
 
-    try {
-      await navigator.clipboard.writeText(text);
+    let success = false;
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        success = true;
+      } catch {
+        success = false;
+      }
+    }
+
+    if (!success && typeof document !== 'undefined') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch {
+        success = false;
+      }
+    }
+
+    if (success) {
       onShowToast('متن خلاصه صورت‌حساب با موفقیت در کلیپ‌بورد کپی شد.');
-    } catch {
+    } else {
       onShowToast('خطا در کپی کردن متن.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl text-white">
+    <div className="printable-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="printable-modal-card bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl text-white">
         {/* Modal Top Bar (Hidden in Print) */}
         <div className="no-print flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800 rounded-t-2xl">
           <div>
@@ -1787,7 +1931,7 @@ const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
         </div>
 
         {/* Printable Statement Canvas */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-5 bg-slate-900 print:bg-white print:text-black">
+        <div className="printable-scroll-canvas p-6 overflow-y-auto flex-1 space-y-5 bg-slate-900 print:bg-white print:text-black">
           {/* Header */}
           <div className="flex items-center justify-between border-b pb-4 border-slate-700 print:border-black">
             <div className="flex items-center gap-3">
@@ -1987,6 +2131,7 @@ const PaymentVoucherModal: React.FC<PaymentVoucherModalProps> = ({
   payment,
   settings,
   onClose,
+  onShowToast,
 }) => {
   const currencyUnit = payment.currencyUnit || settings.currencyUnit || 'تومان';
 
@@ -1998,13 +2143,30 @@ const PaymentVoucherModal: React.FC<PaymentVoucherModalProps> = ({
     deposit: 'بیعانه / پیش‌پرداخت',
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    document.body.classList.add('printing-modal');
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.savePdf) {
+      const cleanCust = payment.customerName.trim().replace(/\s+/g, '_');
+      const defaultName = `رسید_دریافت_${payment.id.slice(-6)}_${cleanCust}.pdf`;
+      const res = await (window as any).electronAPI.savePdf({
+        defaultName,
+        landscape: false,
+      });
+      document.body.classList.remove('printing-modal');
+      if (res?.success) {
+        onShowToast(`فایل PDF رسید دریافت در مسیر ${res.filePath} ذخیره شد.`);
+      } else if (!res?.canceled) {
+        window.print();
+      }
+    } else {
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-modal'), 1000);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl text-white space-y-5">
+    <div className="printable-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="printable-modal-card bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl text-white space-y-5">
         {/* Top Controls */}
         <div className="no-print flex items-center justify-between border-b border-slate-700 pb-3">
           <h3 className="text-base font-bold flex items-center gap-2">

@@ -447,4 +447,237 @@ describe('AccountingService & CRM Lite Accounting Tests', () => {
     expect(summaries[0].balanceStatus).toBe('settled');
     expect(summaries[0].totalPendingCheques).toBe(0);
   });
+
+  it('12. Accurately handles multi-currency conversion (Rial vs Toman) across invoices and payments', () => {
+    const cust: Customer = { id: 'cust_curr', name: 'شرکت پترو صنعت کارون' };
+
+    // Invoice issued in Rials: 100,000,000 Rials (= 10,000,000 Tomans)
+    const rialInvoice: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_rial_1',
+      invoiceNumber: '8001',
+      customerName: 'شرکت پترو صنعت کارون',
+      totalAmount: 100000000,
+      currencyUnit: 'ریال',
+    };
+
+    // Payment registered in Tomans: 10,000,000 Tomans
+    const tomanPayment: PaymentRecord = {
+      id: 'pay_toman_1',
+      customerId: 'cust_curr',
+      customerName: 'شرکت پترو صنعت کارون',
+      invoiceId: 'inv_rial_1',
+      invoiceNumber: '8001',
+      amount: 10000000,
+      currencyUnit: 'تومان',
+      paymentDate: '1403/07/20',
+      method: 'transfer',
+      status: 'cleared',
+      createdAt: '2024-10-11T10:00:00Z',
+    };
+
+    // 1. Target currency = Toman (default)
+    const summariesToman = AccountingService.computeCustomerSummaries(
+      [cust],
+      [rialInvoice],
+      [tomanPayment],
+      'تومان'
+    );
+    expect(summariesToman[0].totalInvoiced).toBe(10000000); // 100M Rials converted to 10M Tomans
+    expect(summariesToman[0].totalPaid).toBe(10000000);
+    expect(summariesToman[0].balance).toBe(0);
+    expect(summariesToman[0].balanceStatus).toBe('settled');
+
+    // 2. Invoice settlement check
+    const settlements = AccountingService.computeInvoiceSettlementList(
+      [rialInvoice],
+      [tomanPayment]
+    );
+    expect(settlements[0].totalAmount).toBe(100000000);
+    expect(settlements[0].paidAmount).toBe(100000000); // 10M Tomans converted to 100M Rials to match invoice currency
+    expect(settlements[0].remainingAmount).toBe(0);
+    expect(settlements[0].status).toBe('fully_paid');
+
+    // 3. Customer Statement in Rials
+    const statementRial = AccountingService.generateCustomerStatement(
+      cust,
+      [rialInvoice],
+      [tomanPayment],
+      '1403/07/25',
+      'ریال'
+    );
+    expect(statementRial.totalDebit).toBe(100000000);
+    expect(statementRial.totalCredit).toBe(100000000);
+    expect(statementRial.finalBalance).toBe(0);
+    expect(statementRial.currencyUnit).toBe('ریال');
+  });
+
+  it('13. Robust Persian & Arabic Unicode normalization (Kaf, Yeh, ZWNJ, and Arabic/Persian digits)', () => {
+    // Customer name with Arabic Yeh (ي) and Arabic Kaf (ك)
+    const custArabic: Customer = { id: 'cust_ar', name: 'شركت پتروشيمى جم' };
+
+    // Invoice with Persian Ke (ک) and Persian Ye (ی) and ZWNJ
+    const invPersian: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_pe_1',
+      customerName: 'شرکت پتروشیمی‌ جم',
+      totalAmount: 45000000,
+    };
+
+    // Payment with standard spaces and Arabic digits in name
+    const payDigits: PaymentRecord = {
+      id: 'pay_dg_1',
+      customerId: '',
+      customerName: 'شرکت پتروشیمی جم',
+      amount: 45000000,
+      currencyUnit: 'تومان',
+      paymentDate: '1403/07/15',
+      method: 'transfer',
+      status: 'cleared',
+      createdAt: '2024-10-06T10:00:00Z',
+    };
+
+    const summaries = AccountingService.computeCustomerSummaries(
+      [custArabic],
+      [invPersian],
+      [payDigits]
+    );
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].totalInvoiced).toBe(45000000);
+    expect(summaries[0].totalPaid).toBe(45000000);
+    expect(summaries[0].balance).toBe(0);
+    expect(summaries[0].balanceStatus).toBe('settled');
+  });
+
+  it('14. Discovers and synthesizes orphan customer accounts from historical invoices and payments', () => {
+    const orphanInvoice: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_orphan',
+      customerName: 'سازمان آب منطقه‌ای ایلام',
+      totalAmount: 85000000,
+      currencyUnit: 'تومان',
+    };
+
+    const orphanPayment: PaymentRecord = {
+      id: 'pay_orphan',
+      customerId: '',
+      customerName: 'سازمان آب منطقه‌ای ایلام',
+      amount: 30000000,
+      currencyUnit: 'تومان',
+      paymentDate: '1403/07/22',
+      method: 'pos',
+      status: 'cleared',
+      createdAt: '2024-10-13T10:00:00Z',
+    };
+
+    // customers array is empty, but invoice and payment exist
+    const summaries = AccountingService.computeCustomerSummaries(
+      [],
+      [orphanInvoice],
+      [orphanPayment]
+    );
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].customerName).toBe('سازمان آب منطقه‌ای ایلام');
+    expect(summaries[0].totalInvoiced).toBe(85000000);
+    expect(summaries[0].totalPaid).toBe(30000000);
+    expect(summaries[0].balance).toBe(55000000);
+    expect(summaries[0].balanceStatus).toBe('debtor');
+  });
+
+  it('15. Customer isolation in invoice settlement matching prevents cross-customer invoice collision', () => {
+    const invCustomerA: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_cust_a',
+      invoiceNumber: '777',
+      customerName: 'مشتری اول',
+      totalAmount: 50000000,
+      currencyUnit: 'تومان',
+    };
+
+    const invCustomerB: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_cust_b',
+      invoiceNumber: '777', // Same invoice number as customer A
+      customerName: 'مشتری دوم',
+      totalAmount: 50000000,
+      currencyUnit: 'تومان',
+    };
+
+    // Payment explicitly belongs to Customer B
+    const paymentCustomerB: PaymentRecord = {
+      id: 'pay_cust_b',
+      customerId: 'cust_b',
+      customerName: 'مشتری دوم',
+      invoiceNumber: '777',
+      amount: 50000000,
+      currencyUnit: 'تومان',
+      paymentDate: '1403/07/20',
+      method: 'transfer',
+      status: 'cleared',
+      createdAt: '2024-10-11T10:00:00Z',
+    };
+
+    const settlements = AccountingService.computeInvoiceSettlementList(
+      [invCustomerA, invCustomerB],
+      [paymentCustomerB]
+    );
+
+    const settlementA = settlements.find((s) => s.invoiceId === 'inv_cust_a')!;
+    const settlementB = settlements.find((s) => s.invoiceId === 'inv_cust_b')!;
+
+    // Customer A's invoice must NOT be paid off by Customer B's payment
+    expect(settlementA.paidAmount).toBe(0);
+    expect(settlementA.status).toBe('unpaid');
+
+    // Customer B's invoice must be fully paid
+    expect(settlementB.paidAmount).toBe(50000000);
+    expect(settlementB.status).toBe('fully_paid');
+  });
+
+  it('16. Chronological sorting in customer statement correctly parses Persian digits in dates', () => {
+    const cust: Customer = { id: 'cust_date', name: 'خریدار تست تاریخ' };
+
+    const inv1: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_d1',
+      invoiceNumber: '10',
+      customerName: 'خریدار تست تاریخ',
+      jalaliDate: '1403/07/01', // English digits
+      totalAmount: 10000000,
+    };
+
+    const pay1: PaymentRecord = {
+      id: 'pay_d1',
+      customerId: 'cust_date',
+      customerName: 'خریدار تست تاریخ',
+      amount: 5000000,
+      currencyUnit: 'تومان',
+      paymentDate: '۱۴۰۳/۰۷/۰۵', // Persian digits!
+      method: 'cash',
+      status: 'cleared',
+      createdAt: '2024-09-26T10:00:00Z',
+    };
+
+    const inv2: Invoice = {
+      ...sampleInvoices[0],
+      id: 'inv_d2',
+      invoiceNumber: '11',
+      customerName: 'خریدار تست تاریخ',
+      jalaliDate: '1403/07/12',
+      totalAmount: 20000000,
+    };
+
+    const statement = AccountingService.generateCustomerStatement(
+      cust,
+      [inv1, inv2],
+      [pay1],
+      '1403/07/20'
+    );
+
+    expect(statement.entries).toHaveLength(3);
+    // pay1 on 1403/07/05 must be ordered between 1403/07/01 and 1403/07/12
+    expect(statement.entries[0].id).toBe('inv_d1');
+    expect(statement.entries[1].id).toBe('pay_d1');
+    expect(statement.entries[2].id).toBe('inv_d2');
+  });
 });

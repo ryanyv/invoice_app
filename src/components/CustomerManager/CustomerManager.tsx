@@ -92,13 +92,13 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
 
   const currencyUnit = settings.currencyUnit || 'تومان';
 
-  // Compute purchase analytics per customer (normalized by trimmed lowercase name)
+  // Compute purchase analytics per customer (normalized by robust Persian/Arabic normalization)
   const statsByCustomerId = useMemo(() => {
     const map = new Map<string, CustomerStats>();
     for (const c of customers) {
-      const normalizedName = (c.name || '').trim().toLowerCase();
+      const normalizedName = AccountingService.normalize(c.name);
       const matchedInvoices = invoices.filter(
-        (inv) => (inv.customerName || '').trim().toLowerCase() === normalizedName
+        (inv) => AccountingService.normalize(inv.customerName) === normalizedName
       );
       const totalSpent = matchedInvoices.reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
       const lastInvoiceDate = matchedInvoices.length > 0 ? matchedInvoices[0].jalaliDate : null;
@@ -114,8 +114,13 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
 
   // Financial summaries for all customers (CRM Lite Accounting)
   const financialSummaries = useMemo(() => {
-    return AccountingService.computeCustomerSummaries(customers, invoices, payments || StorageService.getPayments());
-  }, [customers, invoices, payments]);
+    return AccountingService.computeCustomerSummaries(
+      customers,
+      invoices,
+      payments || StorageService.getPayments(),
+      (settings.currencyUnit as any) || 'تومان'
+    );
+  }, [customers, invoices, payments, settings.currencyUnit]);
 
   const financialSummaryMap = useMemo(() => {
     const map = new Map<string, (typeof financialSummaries)[0]>();

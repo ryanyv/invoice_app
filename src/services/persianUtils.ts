@@ -174,3 +174,24 @@ export function numberToPersianWords(value: number): string {
   return wordsParts.join(' و ');
 }
 
+/**
+ * Normalizes Persian and Arabic text strings:
+ * - Unifies Arabic characters (ك -> ک, ي/ى -> ی)
+ * - Converts Arabic & Persian digits to standard English digits
+ * - Replaces zero-width characters (ZWNJ, ZWJ, etc.) with space
+ * - Collapses repeated whitespace to a single space
+ * - Lowercases Latin characters and trims
+ */
+export function normalizePersianText(input?: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[\u200B-\u200D\uFEFF\u00A0\u00AD]/g, ' ')
+    .replace(/[ك]/g, 'ک')
+    .replace(/[يى]/g, 'ی')
+    .replace(/[٠-٩]/g, (w) => String(['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'].indexOf(w)))
+    .replace(/[۰-۹]/g, (w) => String(['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'].indexOf(w)))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
