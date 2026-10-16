@@ -116,3 +116,4 @@ For security and file integrity verification, compare the SHA-256 checksums belo
 - **Developed for**: Polygharb (پلی غرب)
 - **Technical Stack**: React 19, TypeScript, Electron 44, Vite, Tailwind CSS v4, Vitest.
 - **All Rights Reserved © Polygharb**.
+
