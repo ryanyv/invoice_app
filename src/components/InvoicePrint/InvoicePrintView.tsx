@@ -390,6 +390,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                   <th className="border border-slate-300 py-1.5 px-1">وزن/متر (kg)</th>
                   <th className="border border-slate-300 py-1.5 px-1 sm:px-2">وزن کل (kg)</th>
                   <th className="border border-slate-300 py-1.5 px-1 sm:px-2">قیمت/kg ({currencyUnit})</th>
+                  <th className="border border-slate-300 py-1.5 px-1 sm:px-2">قیمت/متر ({currencyUnit})</th>
                   <th className="border border-slate-300 py-1.5 px-1 sm:px-2">قیمت کل ({currencyUnit})</th>
                 </tr>
               </thead>
@@ -405,6 +406,7 @@ export const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({
                     <td className="border border-slate-300 py-1 px-1 font-mono">{toPersianDigits(item.weightPerMeter.toFixed(3))}</td>
                     <td className="border border-slate-300 py-1 px-1 sm:px-2 font-mono font-medium">{toPersianDigits(item.totalWeight.toFixed(3))}</td>
                     <td className="border border-slate-300 py-1 px-1 sm:px-2 font-mono">{formatNumber(item.pricePerKg, true)}</td>
+                    <td className="border border-slate-300 py-1 px-1 sm:px-2 font-mono">{formatNumber(item.pricePerMeter ?? Math.round(item.weightPerMeter * item.pricePerKg), true)}</td>
                     <td className="border border-slate-300 py-1 px-1 sm:px-2 font-mono font-bold text-slate-900">{formatNumber(item.totalPrice, true)}</td>
                   </tr>
                 ))}

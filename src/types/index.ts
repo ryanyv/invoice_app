@@ -5,7 +5,7 @@ export type PackagingType = 'coil' | 'branch';
 
 export interface PackagingOptions {
   preferredType?: PackagingType;
-  branchLength?: 6 | 12;
+  branchLength?: 5 | 6 | 12;
   coilLength?: number;
 }
 
@@ -71,7 +71,7 @@ export interface ReversePipeCalculationParams {
   targetWeightKg?: number; // In kg (e.g. 2500)
   targetBudget?: number; // In active currency
   packagingPreference?: PackagingType;
-  branchLengthPreference?: 6 | 12;
+  branchLengthPreference?: 5 | 6 | 12;
   coilLengthPreference?: number;
 }
 
@@ -82,6 +82,7 @@ export interface ReversePipeCalculationResult {
   totalTonnage: number;
   totalPrice: number;
   unitPricePerKg: number;
+  pricePerMeter?: number;
   packaging: PackagingResult;
 }
 
@@ -96,6 +97,7 @@ export interface PipeItem {
   weightPerMeter: number; // kg/m
   totalWeight: number; // kg
   pricePerKg: number; // Toman
+  pricePerMeter?: number; // Toman
   totalPrice: number; // Toman
   packaging?: PackagingResult;
 }

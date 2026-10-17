@@ -59,6 +59,7 @@ describe('Calculator Service - DIN 8074 Lookups & Pipe Calculations', () => {
 
       expect(item.weightPerMeter).toBe(3.14);
       expect(item.totalWeight).toBe(314);
+      expect(item.pricePerMeter).toBe(298300); // 3.14 kg/m * 95,000 = 298,300
       expect(item.totalPrice).toBe(29830000); // 314 kg * 95,000 = 29,830,000
       expect(item.length).toBe(100);
       expect(item.type).toBe('pipe');

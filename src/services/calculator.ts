@@ -67,10 +67,11 @@ export function computePackaging(
       labelPersian: `${toPersianDigits(unitCount)} کلاف ${toPersianDigits(coilLen)} متری`,
     };
   } else {
-    const defaultBranchLen: 6 | 12 = diameter > 125 ? 12 : 6;
-    const branchLen = options?.branchLength === 6 || options?.branchLength === 12
-      ? options.branchLength
-      : defaultBranchLen;
+    const defaultBranchLen: 5 | 6 | 12 = diameter > 125 ? 12 : 6;
+    const branchLen =
+      options?.branchLength === 5 || options?.branchLength === 6 || options?.branchLength === 12
+        ? options.branchLength
+        : defaultBranchLen;
     const unitCount = length > 0 ? Math.ceil(length / branchLen) : 0;
     const nominalTotalLength = unitCount * branchLen;
     const wasteOrSurplusMeters = Number(Math.max(0, nominalTotalLength - length).toFixed(2));
@@ -106,7 +107,7 @@ export const FREIGHT_VEHICLES: FreightVehicle[] = [
     nameEn: 'Khavar / Isuzu Light Truck (4t)',
     maxPayloadKg: 4000,
     maxBranchLengthMeters: 4.5,
-    descriptionFa: 'مناسب کلاف‌های متوسط و اتصالات تا ۴ تن (بدون شاخه ۶ یا ۱۲ متری)',
+    descriptionFa: 'مناسب کلاف‌های متوسط و اتصالات تا ۴ تن (بدون شاخه ۵، ۶ یا ۱۲ متری)',
   },
   {
     id: 'truck_6w',
@@ -114,7 +115,7 @@ export const FREIGHT_VEHICLES: FreightVehicle[] = [
     nameEn: '6-Wheel Single Truck (10t)',
     maxPayloadKg: 10000,
     maxBranchLengthMeters: 6.0,
-    descriptionFa: 'مناسب حمل شاخه‌های ۶ متری و کلاف‌های سنگین تا ۱۰ تن',
+    descriptionFa: 'مناسب حمل شاخه‌های ۵ و ۶ متری و کلاف‌های سنگین تا ۱۰ تن',
   },
   {
     id: 'truck_10w',
@@ -122,7 +123,7 @@ export const FREIGHT_VEHICLES: FreightVehicle[] = [
     nameEn: '10-Wheel Double Truck (15t)',
     maxPayloadKg: 15000,
     maxBranchLengthMeters: 6.0,
-    descriptionFa: 'مناسب پروژه‌های بزرگ با شاخه‌های ۶ متری تا ۱۵ تن',
+    descriptionFa: 'مناسب پروژه‌های بزرگ با شاخه‌های ۵ و ۶ متری تا ۱۵ تن',
   },
   {
     id: 'trailer_flatbed',
@@ -137,7 +138,7 @@ export const FREIGHT_VEHICLES: FreightVehicle[] = [
 /**
  * Estimate logistics vehicle requirement with dual constraints:
  * 1. Payload weight capacity
- * 2. Cargo bed pipe length limits (12m branch mandates Flatbed Trailer; 6m branch mandates at least 6W truck)
+ * 2. Cargo bed pipe length limits (12m branch mandates Flatbed Trailer; 5m/6m branch mandates at least 6W truck)
  */
 export function estimateFreightVehicle(
   totalWeightKg: number,
@@ -174,8 +175,9 @@ export function estimateFreightVehicle(
     };
   }
 
-  // Constraint 2: 6m branch mandates at least 6-wheel truck
+  // Constraint 2: 5m or 6m branch mandates at least 6-wheel truck
   if (maxBranchLengthMeters > 2.2) {
+    const branchLabel = maxBranchLengthMeters === 5 ? '۵ متری' : '۶ متری';
     if (totalWeightKg <= 10000) {
       const truck6w = FREIGHT_VEHICLES.find((v) => v.id === 'truck_6w')!;
       const util = Math.min(100, Math.round((totalWeightKg / truck6w.maxPayloadKg) * 100));
@@ -186,7 +188,7 @@ export function estimateFreightVehicle(
         totalTonnage,
         utilizationPercentage: util,
         isLengthConstrained: totalWeightKg <= 4000,
-        recommendationNote: `پیشنهاد ۱ دستگاه کامیون تک ۶ چرخ (۱۰ تن) مناسب شاخه ۶ متری (ضریب بار ${util}٪).`,
+        recommendationNote: `پیشنهاد ۱ دستگاه کامیون تک ۶ چرخ (۱۰ تن) مناسب شاخه ${branchLabel} (ضریب بار ${util}٪).`,
       };
     } else if (totalWeightKg <= 15000) {
       const truck10w = FREIGHT_VEHICLES.find((v) => v.id === 'truck_10w')!;
@@ -198,7 +200,7 @@ export function estimateFreightVehicle(
         totalTonnage,
         utilizationPercentage: util,
         isLengthConstrained: false,
-        recommendationNote: `پیشنهاد ۱ دستگاه کامیون جفت ۱۰ چرخ (۱۵ تن) مناسب شاخه ۶ متری (ضریب بار ${util}٪).`,
+        recommendationNote: `پیشنهاد ۱ دستگاه کامیون جفت ۱۰ چرخ (۱۵ تن) مناسب شاخه ${branchLabel} (ضریب بار ${util}٪).`,
       };
     } else if (totalWeightKg <= 24000) {
       const flatbed = FREIGHT_VEHICLES.find((v) => v.id === 'trailer_flatbed')!;
@@ -279,6 +281,7 @@ export function computePipeItem(
   const safePricePerKg = Math.max(0, params.pricePerKg);
 
   const totalWeight = Number((wpm * safeLength).toFixed(3));
+  const pricePerMeter = Math.round(wpm * safePricePerKg);
   const totalPrice = Math.round(totalWeight * safePricePerKg);
   const packaging = computePackaging(params.diameter, safeLength, params.packagingOptions);
 
@@ -293,6 +296,7 @@ export function computePipeItem(
     weightPerMeter: wpm,
     totalWeight,
     pricePerKg: safePricePerKg,
+    pricePerMeter,
     totalPrice,
     packaging,
   };
@@ -355,6 +359,7 @@ export function calculateReversePipe(
 
   const totalWeightKg = Number((calculatedLength * wpm).toFixed(3));
   const totalTonnage = Number((totalWeightKg / 1000).toFixed(3));
+  const pricePerMeter = Math.round(wpm * params.pricePerKg);
   const totalPrice = Math.round(totalWeightKg * params.pricePerKg);
 
   const packaging = computePackaging(params.diameter, calculatedLength, {
@@ -370,6 +375,7 @@ export function calculateReversePipe(
     totalTonnage,
     totalPrice,
     unitPricePerKg: params.pricePerKg,
+    pricePerMeter,
     packaging,
   };
 }

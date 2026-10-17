@@ -133,9 +133,9 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   }, [weightTable]);
 
   const [pipeDiameter, setPipeDiameter] = useState<number>(110);
-  const [pipeSdr, setPipeSdr] = useState<number>(11);
-  const [pipePn, setPipePn] = useState<number>(16);
-  const [pipeLength, setPipeLength] = useState<number>(100);
+  const [pipeSdr, setPipeSdr] = useState<number>(26);
+  const [pipePn, setPipePn] = useState<number>(6.3);
+  const [pipeLength, setPipeLength] = useState<number>(5);
   const [pipePricePerKg, setPipePricePerKg] = useState<number>(() =>
     getBasePipePriceForGrade('PE100', activeCurrency)
   );
@@ -167,20 +167,20 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
     return getWeightPerMeter(pipeDiameter, pipeSdr, weightTable);
   }, [pipeDiameter, pipeSdr, weightTable]);
 
-  // Live pipe total weight and total price
+  // Live pipe price per meter, total weight, and total price
+  const currentPipePricePerMeter = currentWpm ? Math.round(currentWpm * pipePricePerKg) : 0;
   const currentPipeWeight = currentWpm ? Number((currentWpm * pipeLength).toFixed(3)) : 0;
   const currentPipeTotalPrice = Math.round(currentPipeWeight * pipePricePerKg);
 
   // --- PACKAGING STATE FOR PIPE FORM ---
-  const [pipePackagingType, setPipePackagingType] = useState<PackagingType>('coil');
-  const [pipeBranchLength, setPipeBranchLength] = useState<6 | 12>(6);
+  const [pipePackagingType, setPipePackagingType] = useState<PackagingType>('branch');
+  const [pipeBranchLength, setPipeBranchLength] = useState<5 | 6 | 12>(5);
   const [pipeCoilLength, setPipeCoilLength] = useState<number>(100);
 
   // Sync packaging mode if diameter > 125mm (strictly branch only)
   useEffect(() => {
     if (!isCoilAllowed(pipeDiameter)) {
       setPipePackagingType('branch');
-      setPipeBranchLength(pipeDiameter > 125 ? 12 : 6);
     }
   }, [pipeDiameter]);
 
@@ -198,14 +198,14 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   const [reverseWeightUnit, setReverseWeightUnit] = useState<'ton' | 'kg'>('ton');
   const [reverseTargetValue, setReverseTargetValue] = useState<number>(5); // default 5 tons
   const [reverseDiameter, setReverseDiameter] = useState<number>(110);
-  const [reverseSdr, setReverseSdr] = useState<number>(11);
+  const [reverseSdr, setReverseSdr] = useState<number>(26);
   const [reverseGrade, setReverseGrade] = useState<PipeGrade>('PE100');
-  const [reversePn, setReversePn] = useState<number>(16);
+  const [reversePn, setReversePn] = useState<number>(6.3);
   const [reversePricePerKg, setReversePricePerKg] = useState<number>(() =>
     getBasePipePriceForGrade('PE100', activeCurrency)
   );
-  const [reversePackagingType, setReversePackagingType] = useState<PackagingType>('coil');
-  const [reverseBranchLength, setReverseBranchLength] = useState<6 | 12>(6);
+  const [reversePackagingType, setReversePackagingType] = useState<PackagingType>('branch');
+  const [reverseBranchLength, setReverseBranchLength] = useState<5 | 6 | 12>(5);
   const [reverseCoilLength, setReverseCoilLength] = useState<number>(100);
 
   // Available SDRs for reverse diameter
@@ -232,7 +232,6 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
   useEffect(() => {
     if (!isCoilAllowed(reverseDiameter)) {
       setReversePackagingType('branch');
-      setReverseBranchLength(reverseDiameter > 125 ? 12 : 6);
     }
   }, [reverseDiameter]);
 
@@ -646,7 +645,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
           const packagingOptions: PackagingOptions | undefined = item.packaging
             ? {
                 preferredType: item.packaging.packagingType,
-                branchLength: item.packaging.unitLength === 12 ? 12 : 6,
+                branchLength:
+                  item.packaging.unitLength === 12
+                    ? 12
+                    : item.packaging.unitLength === 5
+                    ? 5
+                    : 6,
                 coilLength:
                   item.packaging.packagingType === 'coil' ? item.packaging.unitLength : undefined,
               }
@@ -816,7 +820,12 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
         pricePerKg: reverseResult.unitPricePerKg,
         packagingOptions: {
           preferredType: reverseResult.packaging.packagingType,
-          branchLength: reverseResult.packaging.unitLength === 12 ? 12 : 6,
+          branchLength:
+            reverseResult.packaging.unitLength === 12
+              ? 12
+              : reverseResult.packaging.unitLength === 5
+              ? 5
+              : 6,
           coilLength: reverseResult.packaging.unitLength,
         },
       },
@@ -1415,7 +1424,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                         setReverseDiameter(d);
                         const sdrs = Object.keys(weightTable[d] || {}).map(Number);
                         if (sdrs.length && !sdrs.includes(reverseSdr)) {
-                          setReverseSdr(sdrs[0]);
+                          setReverseSdr(sdrs.includes(26) ? 26 : sdrs[0]);
                         }
                       }}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
@@ -1499,6 +1508,13 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                             <span className="text-slate-400">طول شاخه:</span>
                             <button
                               type="button"
+                              onClick={() => setReverseBranchLength(5)}
+                              className={`px-1.5 rounded ${reverseBranchLength === 5 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                            >
+                              ۵ متری
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setReverseBranchLength(6)}
                               className={`px-1.5 rounded ${reverseBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
                             >
@@ -1538,6 +1554,13 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                         <div className="flex items-center gap-1 text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-700 font-mono">
                           <button
                             type="button"
+                            onClick={() => setReverseBranchLength(5)}
+                            className={`px-2 py-0.5 rounded ${reverseBranchLength === 5 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۵ متری
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setReverseBranchLength(6)}
                             className={`px-2 py-0.5 rounded ${reverseBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
                           >
@@ -1559,10 +1582,17 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 {/* Live Calculation Output Card */}
                 {reverseResult ? (
                   <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs flex-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 text-xs flex-1">
                       <div>
                         <span className="text-slate-400 block">وزن هر متر (DIN):</span>
                         <strong className="text-slate-200 text-sm font-mono">{reverseResult.weightPerMeter} kg/m</strong>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-400 block">قیمت هر متر:</span>
+                        <strong className="text-cyan-400 text-sm font-mono font-bold">
+                          {formatPrice(reverseResult.pricePerMeter ?? Math.round(reverseResult.weightPerMeter * reverseResult.unitPricePerKg), activeCurrency)}
+                        </strong>
                       </div>
 
                       <div>
@@ -1643,7 +1673,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                       setPipeDiameter(d);
                       const sdrs = Object.keys(weightTable[d] || {}).map(Number);
                       if (sdrs.length && !sdrs.includes(pipeSdr)) {
-                        setPipeSdr(sdrs[0]);
+                        setPipeSdr(sdrs.includes(26) ? 26 : sdrs[0]);
                       }
                     }}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none"
@@ -1754,6 +1784,13 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                           <span className="text-slate-400">طول شاخه:</span>
                           <button
                             type="button"
+                            onClick={() => setPipeBranchLength(5)}
+                            className={`px-2 py-0.5 rounded ${pipeBranchLength === 5 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                          >
+                            ۵ متری
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setPipeBranchLength(6)}
                             className={`px-2 py-0.5 rounded ${pipeBranchLength === 6 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
                           >
@@ -1788,9 +1825,16 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
                         <AlertCircle className="w-3.5 h-3.5" />
-                        <span>قطر {pipeDiameter}mm: کلاف‌پیچی غیرمجاز است (الزام شاخه مستقیم ۶ یا ۱۲ متری)</span>
+                        <span>قطر {pipeDiameter}mm: کلاف‌پیچی غیرمجاز است (الزام شاخه مستقیم ۵، ۶ یا ۱۲ متری)</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-xs font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setPipeBranchLength(5)}
+                          className={`px-2.5 py-0.5 rounded ${pipeBranchLength === 5 ? 'bg-blue-500 text-white' : 'text-slate-400'}`}
+                        >
+                          ۵ متری
+                        </button>
                         <button
                           type="button"
                           onClick={() => setPipeBranchLength(6)}
@@ -1830,6 +1874,13 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                     <span className="text-slate-400 block">وزن هر متر (DIN):</span>
                     <strong className="text-slate-200 text-sm font-mono">
                       {currentWpm ? `${currentWpm} kg/m` : 'نامعتبر'}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block">قیمت هر متر:</span>
+                    <strong className="text-cyan-400 text-sm font-mono font-bold">
+                      {currentWpm ? formatPrice(currentPipePricePerMeter, activeCurrency) : 'نامعتبر'}
                     </strong>
                   </div>
 
@@ -2036,7 +2087,7 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
                 <th className="py-3 px-4">شرح کالا و مشخصات فنی</th>
                 <th className="py-3 px-4 text-center">مقدار / طول / تعداد</th>
                 <th className="py-3 px-4 text-center">وزن واحد / کل (kg)</th>
-                <th className="py-3 px-4 text-center">قیمت واحد ({activeCurrency})</th>
+                <th className="py-3 px-4 text-center">قیمت واحد / هر متر ({activeCurrency})</th>
                 <th className="py-3 px-4 text-center">قیمت کل ({activeCurrency})</th>
                 <th className="py-3 px-4 text-center">حذف</th>
               </tr>
@@ -2148,19 +2199,25 @@ export const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({
 
                       <td className="py-3 px-3 text-center">
                         {isPipe ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <input
-                              type="number"
-                              min="0"
-                              step="100"
-                              value={item.pricePerKg}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                handleUpdatePipeItem(item.id, item.length, val);
-                              }}
-                              className="w-28 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                              title={`ویرایش آنلاین قیمت هر کیلوگرم (${activeCurrency})`}
-                            />
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                value={item.pricePerKg}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  handleUpdatePipeItem(item.id, item.length, val);
+                                }}
+                                className="w-28 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2 py-1 text-center font-mono text-white text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                title={`ویرایش آنلاین قیمت هر کیلوگرم (${activeCurrency})`}
+                              />
+                              <span className="text-[10px] text-slate-400">/kg</span>
+                            </div>
+                            <div className="text-[11px] text-cyan-400 font-mono">
+                              هر متر: {formatNumber(item.pricePerMeter ?? Math.round(item.weightPerMeter * item.pricePerKg))}
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">

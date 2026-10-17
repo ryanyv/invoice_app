@@ -191,7 +191,7 @@ for (const d of largeDiameters) {
 // 2.3 Comprehensive Sweep of Lengths and Unit Sizes
 const testLengths = [0, 0.1, 1, 5.9, 6, 6.1, 11.9, 12, 12.1, 49.9, 50, 50.1, 99.9, 100, 100.1, 230, 500, 1000, 1000.5, 9999];
 const coilSizes = [50, 100, 150, 200, 400];
-const branchSizes: (6 | 12)[] = [6, 12];
+const branchSizes: (5 | 6 | 12)[] = [5, 6, 12];
 
 let packagingChecksCount = 0;
 

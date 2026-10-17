@@ -345,12 +345,17 @@ describe('Challenger M5 Adversarial Probes', () => {
       expect(p2.unitLength).toBe(100);
       expect(p2.unitCount).toBe(2);
 
-      // Invalid branch length (e.g. 5 instead of 6 or 12) falls back to default (6 for <=125, 12 for >125)
-      const p3 = computePackaging(110, 30, { preferredType: 'branch', branchLength: 5 as unknown as 6 });
+      // Valid 5m branch length is supported alongside 6m and 12m
+      const p5m = computePackaging(110, 30, { preferredType: 'branch', branchLength: 5 });
+      expect(p5m.unitLength).toBe(5);
+      expect(p5m.unitCount).toBe(6);
+
+      // Invalid branch length (e.g. 8 instead of 5, 6, or 12) falls back to default (6 for <=125, 12 for >125)
+      const p3 = computePackaging(110, 30, { preferredType: 'branch', branchLength: 8 as unknown as 6 });
       expect(p3.unitLength).toBe(6);
       expect(p3.unitCount).toBe(5);
 
-      const p4 = computePackaging(160, 30, { preferredType: 'branch', branchLength: 5 as unknown as 12 });
+      const p4 = computePackaging(160, 30, { preferredType: 'branch', branchLength: 8 as unknown as 12 });
       expect(p4.unitLength).toBe(12);
       expect(p4.unitCount).toBe(3);
     });
