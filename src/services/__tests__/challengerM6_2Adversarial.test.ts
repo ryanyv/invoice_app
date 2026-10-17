@@ -103,6 +103,7 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
       expect(pkg.scripts.test).toBe('vitest run');
       expect(pkg.scripts.build).toBe('tsc && vite build');
       expect(pkg.scripts['electron:build:mac']).toContain('electron-builder --mac');
+      expect(pkg.scripts['electron:build:win']).toContain('ELECTRON_BUILDER_7Z_FILTER=BCJ2');
       expect(pkg.scripts['electron:build:win']).toContain('electron-builder --win --x64 --arm64');
     });
   });

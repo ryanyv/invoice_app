@@ -5,8 +5,6 @@ const fs = require('fs');
 // Ensure reliable rendering on Windows (including VMs with software framebuffers like UTM virtio-ramfb, RDP, and systems without DirectX 12 GPUs)
 if (process.platform === 'win32') {
   app.disableHardwareAcceleration();
-  app.commandLine.appendSwitch('disable-gpu');
-  app.commandLine.appendSwitch('disable-software-rasterizer');
   app.commandLine.appendSwitch('no-sandbox');
 }
 
