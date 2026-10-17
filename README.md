@@ -2,12 +2,12 @@
   <img src="public/logo.png" alt="Pipecal Pro Logo" width="160" />
 </p>
 
-# Pipecal Pro 2.1 🚀
+# Pipecal Pro 2.2 🚀
 ### Enterprise Desktop System for Polyethylene Pipes & Fittings Pricing, Quotation, Accounting & Logistics
 ### سیستم جامع صدور پیش‌فاکتور، مدیریت قیمت، حسابداری و اسناد مالی لوله و اتصالات پلی‌اتیلن
 
 <p align="center">
-  <a href="https://github.com/ryanyv/invoice_app/releases/latest"><img src="https://img.shields.io/badge/Release-v2.1.0-0284c7?style=flat-square&logo=github" alt="Latest Release" /></a>
+  <a href="https://github.com/ryanyv/invoice_app/releases/latest"><img src="https://img.shields.io/badge/Release-v2.2.0-0284c7?style=flat-square&logo=github" alt="Latest Release" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.3-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-44.5-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 44" /></a>
@@ -43,27 +43,27 @@
 
 ### 📥 Downloads
 
-Ready-to-use desktop binaries for macOS and Windows are published and available on the [GitHub Releases page](https://github.com/ryanyv/invoice_app/releases/latest):
+Ready-to-use desktop binaries for macOS and Windows (**Latest: v2.2.0**) are published and available on the [GitHub Releases page](https://github.com/ryanyv/invoice_app/releases/latest):
 
-| Operating System | Package Type / Architecture | File Size | Direct Download |
+| Operating System | Package Type / Architecture | File Size | Direct Download (v2.2.0) |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Download Pipecal Pro 2.1.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
-| 🪟 **Windows** | Setup Installer x64 `.exe` (NSIS) | ~109 MB | [Download Pipecal Pro Setup 2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
-| 🪟 **Windows** | Standalone Portable x64 `.exe` | ~108 MB | [Download Pipecal Pro 2.1.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [Download Pipecal Pro 2.2.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro-2.2.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 & ARM64 `.exe` (NSIS) | ~220 MB | [Download Pipecal Pro Setup 2.2.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro.Setup.2.2.0.exe) |
+| 🪟 **Windows** | Standalone Portable x64 & ARM64 `.exe` | ~220 MB | [Download Pipecal Pro 2.2.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro.2.2.0.exe) |
 
-> 💡 **Release Notes**: View changelogs and historical builds on the [Releases Archive](https://github.com/ryanyv/invoice_app/releases).
+> 💡 **Previous Releases Archive**: Older versions remain permanently available on the [GitHub Releases Archive](https://github.com/ryanyv/invoice_app/releases), including [**v2.1.0**](https://github.com/ryanyv/invoice_app/releases/tag/v2.1.0) and [**v2.0.0**](https://github.com/ryanyv/invoice_app/releases/tag/v2.0.0).
 
 ---
 
 ### 🌟 Key Features
 
 #### 1. 🧮 Polyethylene Engineering Engine (PE Domain)
-- **DIN 8074 / 8075 & INSO 14427 Standard Compliance**: Built-in standard weight lookup tables for nominal pipe diameters from 16 mm to 1200 mm across all standard SDRs (SDR 7.4 through SDR 41) and working pressures (PN 2.5 to PN 25) for PE100, PE80, and PE63.
-- **Bidirectional Calculations**:
-  - Forward: Compute pipe weights, unit rates, and total sums dynamically from length.
-  - Reverse: Determine required length from client budget or target tonnage (e.g. calculating exact meters for a 2-tonne transport threshold).
+- **DIN 8074 / 8075 & INSO 14427 Standard Compliance**: Built-in standard weight lookup tables for nominal pipe diameters from 16 mm to 1200 mm across all standard SDRs (SDR 7.4 through SDR 41) and working pressures (PN 2.5 to PN 25) for PE100, PE80, and PE63 (with quick default configuration for PE100, SDR 26, 5m branch).
+- **Bidirectional Calculations & Price per Meter**:
+  - Forward: Compute pipe weights, live price per meter (`قیمت هر متر`), unit rates per kg, and total sums dynamically from length.
+  - Reverse: Determine required length and price per meter from client budget or target tonnage (e.g. calculating exact meters for a 2-tonne transport threshold).
 - **Intelligent Packaging Detector**:
-  - Automatically identifies packaging constraints: flexible coils (کلاف) for diameters $\le 125\text{ mm}$, and rigid branches (شاخه 6m or 12m) for diameters $> 125\text{ mm}$ with automated surplus/remainder length tracking.
+  - Automatically identifies packaging constraints: flexible coils (کلاف) for diameters $\le 125\text{ mm}$, and rigid branches (شاخه 5m, 6m, or 12m) for all diameters with automated surplus/remainder length tracking.
 - **Freight Fleet Estimator**: Recommends appropriate commercial transport vehicles (Nissan pickup, Khavar truck, 6-wheel rigid truck, 10-wheel heavy truck, and flatbed trailer) based on cumulative mass and branch length.
 - **IME Polymer Pricing Formula (بورس کالا)**: Calculates raw material unit cost from Iran Mercantile Exchange polymer index, masterbatch ratios, production overhead, waste percentage, and manufacturer target margins.
 
@@ -104,7 +104,7 @@ Ready-to-use desktop binaries for macOS and Windows are published and available 
 ### 💻 Installation Guide
 
 #### 🍏 macOS
-1. Download `Pipecal.Pro-2.0.0-arm64.dmg`.
+1. Download `Pipecal.Pro-2.2.0-arm64.dmg`.
 2. Double-click the `.dmg` file and drag **Pipecal Pro** into your **Applications** folder.
 3. *If prompted by macOS Gatekeeper ("App is from an unidentified developer"):*
    - Open **System Settings** > **Privacy & Security**.
@@ -115,8 +115,8 @@ Ready-to-use desktop binaries for macOS and Windows are published and available 
      ```
 
 #### 🪟 Windows
-- **Setup Installer**: Run `Pipecal.Pro.Setup.2.0.0.exe` and follow the guided installer. A desktop shortcut will be generated.
-- **Portable Version**: Download `Pipecal.Pro.2.0.0.exe` and run it directly without installation or administrator privileges.
+- **Setup Installer**: Run `Pipecal.Pro.Setup.2.2.0.exe` and follow the guided installer. A desktop shortcut will be generated.
+- **Portable Version**: Download `Pipecal.Pro.2.2.0.exe` and run it directly without installation or administrator privileges.
 - *If prompted by Windows SmartScreen ("Windows protected your PC"):*
   - Click **More info**.
   - Click **Run anyway**.
@@ -125,11 +125,11 @@ Ready-to-use desktop binaries for macOS and Windows are published and available 
 
 ### 🔒 File Integrity & Checksums
 
-| File Name | SHA-256 Digest |
+| File Name (v2.2.0) | SHA-256 Digest |
 | :--- | :--- |
-| `Pipecal.Pro-2.1.0-arm64.dmg` | `a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58` |
-| `Pipecal.Pro.Setup.2.1.0.exe` | `ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46` |
-| `Pipecal.Pro.2.1.0.exe` | `71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb` |
+| `Pipecal.Pro-2.2.0-arm64.dmg` | `04cc133c835a13279435de2886459bbd19a2635d1f53e048017573f40fdc3d2f` |
+| `Pipecal.Pro.Setup.2.2.0.exe` | `f9e206369cb1a398d6b93dee0dc1b7135b5f0ddc551bedf010fed6cd45c6d1da` |
+| `Pipecal.Pro.2.2.0.exe` | `a685d0880b20fe4503532b1cf21a8f4e487080a912f2703c11badfc5effa196e` |
 
 ---
 
@@ -239,26 +239,26 @@ All rights reserved © Polygharb.
 
 ### 📥 دانلود نرم‌افزار
 
-آخرین نسخه‌های آماده نصب برای سیستم‌عامل‌های مکینتاش و ویندوز مستقیماً از طریق تب [GitHub Releases](https://github.com/ryanyv/invoice_app/releases/latest) در دسترس هستند:
+آخرین نسخه‌های آماده نصب (**نسخه ۲.۲.۰**) برای سیستم‌عامل‌های مکینتاش و ویندوز مستقیماً از طریق تب [GitHub Releases](https://github.com/ryanyv/invoice_app/releases/latest) در دسترس هستند:
 
-| سیستم‌عامل (OS) | نوع فایل / معماری (Package) | حجم (Size) | لینک مستقیم دانلود (Direct Download) |
+| سیستم‌عامل (OS) | نوع فایل / معماری (Package) | حجم (Size) | لینک مستقیم دانلود (نسخه ۲.۲.۰) |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [دانلود Pipecal Pro 2.1.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro-2.1.0-arm64.dmg) |
-| 🪟 **Windows** | Setup Installer x64 `.exe` (نصبی) | ~109 MB | [دانلود Pipecal Pro Setup 2.1.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.Setup.2.1.0.exe) |
-| 🪟 **Windows** | Portable x64 `.exe` (بدون نیاز به نصب) | ~108 MB | [دانلود Pipecal Pro 2.1.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.1.0/Pipecal.Pro.2.1.0.exe) |
+| 🍏 **macOS** | Apple Silicon (M1/M2/M3/M4) `.dmg` | ~126 MB | [دانلود Pipecal Pro 2.2.0 macOS DMG](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro-2.2.0-arm64.dmg) |
+| 🪟 **Windows** | Setup Installer x64 & ARM64 `.exe` (نصبی) | ~220 MB | [دانلود Pipecal Pro Setup 2.2.0.exe](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro.Setup.2.2.0.exe) |
+| 🪟 **Windows** | Portable x64 & ARM64 `.exe` (بدون نیاز به نصب) | ~220 MB | [دانلود Pipecal Pro 2.2.0.exe (Portable)](https://github.com/ryanyv/invoice_app/releases/download/v2.2.0/Pipecal.Pro.2.2.0.exe) |
 
-> 💡 **یادداشت:** برای مشاهده تاریخچه تمامی نسخه‌ها، یادداشت‌های تغییرات و نسخه‌های پیشین، به [صفحه انتشارات پروژه (Releases Page)](https://github.com/ryanyv/invoice_app/releases) مراجعه کنید.
+> 💡 **آرشیو نسخه‌های پیشین:** تمامی نسخه‌های قبلی نرم‌افزار از جمله [**نسخه ۲.۱.۰ (v2.1.0)**](https://github.com/ryanyv/invoice_app/releases/tag/v2.1.0) و [**نسخه ۲.۰.۰ (v2.0.0)**](https://github.com/ryanyv/invoice_app/releases/tag/v2.0.0) در [صفحه انتشارات پروژه (Releases Page)](https://github.com/ryanyv/invoice_app/releases) نگهداری می‌شوند و همواره قابل دریافت هستند.
 
 ---
 
 ### 🌟 امکانات و قابلیت‌ها
 
 #### ۱. 🧮 محاسبات تخصصی مهندسی پلی‌اتیلن (PE Domain Engine)
-- **انطباق کامل با استانداردهای DIN 8074 / DIN 8075 و INSO 14427:** جدول وزنی استاندارد یکپارچه برای تمام سایزها (از ۱۶ تا ۱۲۰۰ میلی‌متر)، گریدهای PE100, PE80, PE63 و تمامی رده‌های فشاری و SDR (از SDR 7.4 تا SDR 41).
-- **محاسبات دوطرفه (مستقیم و معکوس):**
-  - تبدیل لحظه‌ای متراژ به وزن کل و قیمت نهایی.
-  - محاسبه معکوس متراژ از روی تناژ یا بودجه کل مشتری (مثلاً تعیین طول دقیق لوله بر حسب ۲ تن ظرفیت بارگیری).
-- **سیستم هوشمند بسته‌بندی (کلاف در برابر شاخه):** تشخیص خودکار سایز لوله؛ کلاف ۱۰۰ یا ۲۰۰ متری برای سایزهای $\le 125\text{ mm}$، و شاخه‌های صلب ۶ متری یا ۱۲ متری برای سایزهای $> 125\text{ mm}$ به همراه اعلام متراژ مازاد و پرتی.
+- **انطباق کامل با استانداردهای DIN 8074 / DIN 8075 و INSO 14427:** جدول وزنی استاندارد یکپارچه برای تمام سایزها (از ۱۶ تا ۱۲۰۰ میلی‌متر)، گریدهای PE100, PE80, PE63 و تمامی رده‌های فشاری و SDR (با تنظیمات پیش‌فرض سریع PE100، رده SDR 26 و شاخه ۵ متری).
+- **محاسبات دوطرفه (مستقیم و معکوس) و نمایش قیمت هر متر:**
+  - تبدیل لحظه‌ای متراژ به وزن کل، **قیمت هر متر (`قیمت/متر`)** و قیمت نهایی در فرم، جدول و چاپ.
+  - محاسبه معکوس متراژ و قیمت هر متر از روی تناژ یا بودجه کل مشتری (مثلاً تعیین طول دقیق لوله بر حسب ۲ تن ظرفیت بارگیری).
+- **سیستم هوشمند بسته‌بندی (کلاف در برابر شاخه ۵، ۶ و ۱۲ متری):** تشخیص خودکار سایز لوله؛ کلاف ۵۰، ۱۰۰ یا ۲۰۰ متری برای سایزهای $\le 125\text{ mm}$، و شاخه‌های صلب **۵ متری، ۶ متری یا ۱۲ متری** به همراه اعلام متراژ مازاد و پرتی.
 - **تخمین‌گر نوع ناوگان حمل‌ونقل بار:** ارزیابی تناژ وزنی و طول شاخه جهت پیشنهاد هوشمند نوع خودرو (وانت نیسان، خاور، کامیون تک ۶ چرخ، کامیون جفت ۱۰ چرخ، و تریلی کفی).
 - **فرمول قیمت‌گذاری مواد اولیه بورس کالا (IME):** محاسبه قیمت پایه بر مبنای نرخ پلیمر بورس، درصد مستربچ، درصد ضایعات، هزینه‌های سربار و حاشیه سود کارخانه.
 
@@ -299,7 +299,7 @@ All rights reserved © Polygharb.
 ### 💻 راهنمای نصب و راه‌اندازی
 
 #### 🍏 سیستم‌عامل مکینتاش (macOS)
-1. فایل `Pipecal.Pro-2.0.0-arm64.dmg` را از جدول دانلود دریافت کنید.
+1. فایل `Pipecal.Pro-2.2.0-arm64.dmg` را از جدول دانلود دریافت کنید.
 2. روی فایل دوبار کلیک کرده و آیکون **Pipecal Pro** را به پوشه **Applications** بکشید.
 3. **نکته امنیتی Gatekeeper مک:** از آنجایی که برنامه به صورت سازمانی و بدون امضای توسعه‌دهنده تجاری اپل توزیع شده است، در اولین اجرا ممکن است پیام امنیتی دریافت کنید:
    - به منوی **System Settings** > **Privacy & Security** بروید.
@@ -310,8 +310,8 @@ All rights reserved © Polygharb.
      ```
 
 #### 🪟 سیستم‌عامل ویندوز (Windows)
-- **نسخه نصبی (Setup):** فایل `Pipecal.Pro.Setup.2.0.0.exe` را اجرا کنید تا مراحل نصب استاندارد طی شده و میانبر روی دسکتاپ قرار گیرد.
-- **نسخه پرتابل (Portable):** فایل `Pipecal.Pro.2.0.0.exe` را دانلود کرده و بدون نیاز به نصب یا دسترسی Administrator، مستقیماً اجرا نمایید.
+- **نسخه نصبی (Setup):** فایل `Pipecal.Pro.Setup.2.2.0.exe` را اجرا کنید تا مراحل نصب استاندارد طی شده و میانبر روی دسکتاپ قرار گیرد.
+- **نسخه پرتابل (Portable):** فایل `Pipecal.Pro.2.2.0.exe` را دانلود کرده و بدون نیاز به نصب یا دسترسی Administrator، مستقیماً اجرا نمایید.
 - **نکته امنیتی Windows SmartScreen:** در صورت نمایش پنجره آبی‌رنگ محافظت ویندوز:
   - روی عبارت **More info** کلیک کنید.
   - دکمه **Run anyway** را بزنید.
@@ -322,11 +322,11 @@ All rights reserved © Polygharb.
 
 برای اطمینان از سلامت و عدم تغییر فایل‌های دریافتی، می‌توانید هش‌های SHA-256 زیر را بررسی کنید:
 
-| نام فایل (File) | الگوریتم SHA-256 |
+| نام فایل (نسخه ۲.۲.۰) | الگوریتم SHA-256 |
 | :--- | :--- |
-| `Pipecal.Pro-2.1.0-arm64.dmg` | `a01a775f5cd62436afc953df42908cecb4d9b6e25eb5a3d47101f0055e8f5b58` |
-| `Pipecal.Pro.Setup.2.1.0.exe` | `ef8e87643830510ee2bd1bdda3dfd2664d9fce95fbb9dc1faf9652614255de46` |
-| `Pipecal.Pro.2.1.0.exe` | `71b7ef02893f1c97848512f9629d27e6abac16c855f07ed7cddae25bb9e625fb` |
+| `Pipecal.Pro-2.2.0-arm64.dmg` | `04cc133c835a13279435de2886459bbd19a2635d1f53e048017573f40fdc3d2f` |
+| `Pipecal.Pro.Setup.2.2.0.exe` | `f9e206369cb1a398d6b93dee0dc1b7135b5f0ddc551bedf010fed6cd45c6d1da` |
+| `Pipecal.Pro.2.2.0.exe` | `a685d0880b20fe4503532b1cf21a8f4e487080a912f2703c11badfc5effa196e` |
 
 ---
 

@@ -71,7 +71,7 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
   describe('2. Package Configuration & electron-builder Specs', () => {
     it('2.1 package.json specifies correct build metadata and appId', () => {
       expect(pkg.name).toBe('pipecal-invoice-pro');
-      expect(pkg.version).toBe('2.1.0');
+      expect(pkg.version).toBe('2.2.0');
       expect(pkg.main).toBe('electron/main.cjs');
       expect(pkg.build).toBeDefined();
       expect(pkg.build.appId).toBe('com.polygharb.pipecal');
