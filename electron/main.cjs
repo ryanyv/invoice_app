@@ -2,6 +2,14 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Ensure reliable rendering on Windows (including VMs with software framebuffers like UTM virtio-ramfb, RDP, and systems without DirectX 12 GPUs)
+if (process.platform === 'win32') {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+  app.commandLine.appendSwitch('no-sandbox');
+}
+
 let mainWindow = null;
 
 function createWindow() {
@@ -15,13 +23,26 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
     },
     show: false,
     backgroundColor: '#0f172a',
   });
 
+  const showWindowSafely = () => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  };
+
+  mainWindow.once('ready-to-show', showWindowSafely);
+  mainWindow.webContents.once('did-finish-load', showWindowSafely);
+  setTimeout(showWindowSafely, 2000);
+
   mainWindow.webContents.on('did-fail-load', (e, code, desc, url) => {
     console.error('[did-fail-load]', code, desc, url);
+    showWindowSafely();
   });
   mainWindow.webContents.on('console-message', (e, level, message, line, sourceId) => {
     console.log(`[Renderer Console] [${level}] ${message} (${sourceId}:${line})`);
@@ -48,12 +69,10 @@ function createWindow() {
   } else {
     const filePath = path.join(__dirname, '../dist/index.html');
     console.log('[Main Process] Loading file:', filePath);
-    mainWindow.loadFile(filePath);
+    mainWindow.loadFile(filePath).catch((err) => {
+      console.error('[Main Process] Failed to load index.html:', err);
+    });
   }
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

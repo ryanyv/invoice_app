@@ -93,6 +93,7 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
       expect(pkg.build.mac.target).toContain('dir');
       expect(pkg.build.mac.identity).toBeNull();
 
+      expect(pkg.build.toolsets?.nsis).toBe('1.2.1');
       expect(pkg.build.win).toBeDefined();
       expect(pkg.build.win.target).toContain('nsis');
       expect(pkg.build.win.target).toContain('portable');
@@ -102,7 +103,7 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
       expect(pkg.scripts.test).toBe('vitest run');
       expect(pkg.scripts.build).toBe('tsc && vite build');
       expect(pkg.scripts['electron:build:mac']).toContain('electron-builder --mac');
-      expect(pkg.scripts['electron:build:win']).toContain('electron-builder --win --x64');
+      expect(pkg.scripts['electron:build:win']).toContain('electron-builder --win --x64 --arm64');
     });
   });
 
@@ -195,18 +196,21 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
       expect(fileInfo).toContain('Mach-O 64-bit executable arm64');
     });
 
-    it('4.2 Windows Setup installer, Portable exe, and win-unpacked exist', () => {
+    it('4.2 Windows Setup installer, Portable exe, win-unpacked (x64), and win-arm64-unpacked exist', () => {
       const setupPath = path.join(rootDir, `release/Pipecal Pro Setup ${pkg.version}.exe`);
       const portablePath = path.join(rootDir, `release/Pipecal Pro ${pkg.version}.exe`);
       const unpackedExe = path.join(rootDir, 'release/win-unpacked/Pipecal Pro.exe');
+      const unpackedArm64Exe = path.join(rootDir, 'release/win-arm64-unpacked/Pipecal Pro.exe');
 
       expect(fs.existsSync(setupPath)).toBe(true);
       expect(fs.existsSync(portablePath)).toBe(true);
       expect(fs.existsSync(unpackedExe)).toBe(true);
+      expect(fs.existsSync(unpackedArm64Exe)).toBe(true);
 
-      expect(fs.statSync(setupPath).size).toBeGreaterThan(100 * 1024 * 1024);
-      expect(fs.statSync(portablePath).size).toBeGreaterThan(100 * 1024 * 1024);
+      expect(fs.statSync(setupPath).size).toBeGreaterThan(200 * 1024 * 1024);
+      expect(fs.statSync(portablePath).size).toBeGreaterThan(200 * 1024 * 1024);
       expect(fs.statSync(unpackedExe).size).toBeGreaterThan(200 * 1024 * 1024);
+      expect(fs.statSync(unpackedArm64Exe).size).toBeGreaterThan(200 * 1024 * 1024);
 
       // Verify PE binary format
       const setupFileInfo = execSync(`file "${setupPath}"`, { encoding: 'utf-8' });
@@ -214,6 +218,9 @@ describe('CHALLENGER 2 ADVERSARIAL TEST SUITE: M6 INTEGRATION & DESKTOP PACKAGIN
 
       const unpackedFileInfo = execSync(`file "${unpackedExe}"`, { encoding: 'utf-8' });
       expect(unpackedFileInfo).toContain('PE32+ executable (GUI) x86-64');
+
+      const unpackedArm64FileInfo = execSync(`file "${unpackedArm64Exe}"`, { encoding: 'utf-8' });
+      expect(unpackedArm64FileInfo).toContain('PE32+ executable (GUI) Aarch64');
     });
 
     it('4.3 macOS app.asar bundle contains dist/, electron/, and public/ offline fonts', () => {
