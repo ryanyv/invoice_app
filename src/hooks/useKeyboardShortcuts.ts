@@ -3,7 +3,8 @@ import { useEffect } from 'react';
 /**
  * Desktop Keyboard Shortcuts Hook & Definitions
  * Milestone M4 (Requirement R4: Offline & Desktop Reliability)
- */
+ 
+*/
 
 export interface ShortcutHandlers {
   onSave?: () => void;
